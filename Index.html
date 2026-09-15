@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Seguimiento Epidemiológico</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- SheetJS para exportar a Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { background-color: #f8f9fa; }
+    .page-section { display: none; }
+    .active-section { display: block; }
+    @media print {
+      .no-print { display: none !important; }
+      .container { width: 100% !important; max-width: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navegación -->
+  <nav id="navbar" class="navbar navbar-expand-lg navbar-dark bg-dark no-print d-none">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Seguimiento Epidemiológico</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-menu navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" id="nav-captura" onclick="showPage('captura')">Captura</a></li>
+          <li class="nav-item"><a class="nav-link" id="nav-visualizacion" onclick="showPage('visualizacion')">Visualización</a></li>
+          <li class="nav-item"><a class="nav-link" id="nav-impresion" onclick="showPage('impresion')">Impresión</a></li>
+          <li class="nav-item"><a class="nav-link" id="nav-seguimiento" onclick="showPage('seguimiento')">Seguimiento</a></li>
+          <li class="nav-item"><a class="nav-link" id="nav-validacion" onclick="showPage('validacion')">Validación</a></li>
+        </ul>
+        <span class="navbar-text me-3 text-light" id="user-info"></span>
+        <button class="btn btn-outline-danger btn-sm" onclick="logout()">Salir del sistema</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+
+    <!-- 1. ACCESO -->
+    <div id="page-acceso" class="page-section active-section">
+      <div class="row justify-content-center">
+        <div class="col-md-4">
+          <div class="card shadow mt-5">
+            <div class="card-body">
+              <h3 class="card-title text-center mb-4">Iniciar Sesión</h3>
+              <form id="form-login" onsubmit="handleLogin(event)">
+                <div class="mb-3">
+                  <label class="form-label">Usuario</label>
+                  <input type="text" id="login-user" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Contraseña</label>
+                  <input type="password" id="login-pass" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Ingresar</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. CAPTURA -->
+    <div id="page-captura" class="page-section">
+      <h2 class="mb-4">Captura de Actividades</h2>
+      <form id="form-captura" onsubmit="handleCaptura(event)">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Nombre del Distrito</label>
+            <select id="cap-distrito" class="form-select" required></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Semana Epidemiológica</label>
+            <select id="cap-semana" class="form-select" required></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Día de la semana</label>
+            <select id="cap-dia" class="form-select" required>
+              <option value="Lunes">Lunes</option><option value="Martes">Martes</option>
+              <option value="Miércoles">Miércoles</option><option value="Jueves">Jueves</option>
+              <option value="Viernes">Viernes</option><option value="Sábado">Sábado</option>
+              <option value="Domingo">Domingo</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="cap-fecha" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Sede de la actividad</label>
+            <input type="text" id="cap-sede" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Actividad Programada</label>
+            <input type="text" id="cap-actividad" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Acciones prioritarias 1</label>
+            <select id="cap-accion1" class="form-select sel-accion" required></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Acciones prioritarias 2</label>
+            <select id="cap-accion2" class="form-select sel-accion"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Acciones prioritarias 3</label>
+            <select id="cap-accion3" class="form-select sel-accion"></select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Requiere equipo itinerante y/o de comunicación</label>
+            <select id="cap-equipo" class="form-select" required>
+              <option value="Itinerante">Itinerante</option>
+              <option value="Comunicación">Comunicación</option>
+              <option value="Ambos">Ambos</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+          <div class="col-12 mt-4">
+            <button type="submit" class="btn btn-success">Guardar</button>
+          </div>
+        </div>
+      </form>
+
+      <hr class="my-5">
+      <h4>Registros de la Sesión</h4>
+      <table class="table table-bordered mt-3" id="table-captura">
+        <thead class="table-light">
+          <tr><th>Distrito</th><th>Semana</th><th>Día</th><th>Fecha</th><th>Sede</th><th>Actividad</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- 3. VISUALIZACIÓN -->
+    <div id="page-visualizacion" class="page-section">
+      <h2>Visualización y Edición</h2>
+      <div class="row my-3 g-3">
+        <div class="col-md-4"><select id="vis-filter-semana" class="form-select"><option value="">-- Semana --</option></select></div>
+        <div class="col-md-4"><select id="vis-filter-distrito" class="form-select"><option value="">-- Distrito --</option></select></div>
+        <div class="col-md-4"><button class="btn btn-primary" onclick="loadVisualizacion()">Filtrar</button></div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped table-sm" id="table-vis">
+          <thead class="table-dark">
+            <tr><th>Distrito</th><th>Semana</th><th>Día</th><th>Fecha</th><th>Sede</th><th>Actividad</th><th>Acción1</th><th>Acción2</th><th>Acción3</th><th>Equipo</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn btn-success mt-3" onclick="saveVisualizacion()">Guardar Modificaciones</button>
+    </div>
+
+    <!-- 4. IMPRESIÓN -->
+    <div id="page-impresion" class="page-section">
+      <h2 class="no-print">Impresión y Reportes</h2>
+      <div class="row my-3 g-3 no-print">
+        <div class="col-md-4"><select id="imp-filter-semana" class="form-select"><option value="">-- Semana --</option></select></div>
+        <div class="col-md-4"><select id="imp-filter-distrito" class="form-select"><option value="">-- Distrito --</option></select></div>
+        <div class="col-md-4">
+          <button class="btn btn-primary me-2" onclick="loadImpresion()">Consultar</button>
+          <button class="btn btn-secondary me-2" onclick="exportToExcel()">Descargar Excel</button>
+          <button class="btn btn-dark" onclick="window.print()">Imprimir</button>
+        </div>
+      </div>
+      <table class="table table-bordered table-sm mt-3" id="table-imp">
+        <thead class="table-secondary">
+          <tr><th>Distrito</th><th>Semana</th><th>Día</th><th>Fecha</th><th>Sede</th><th>Actividad</th><th>Acción1</th><th>Equipo</th><th>Validación</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- 5. SEGUIMIENTO -->
+    <div id="page-seguimiento" class="page-section">
+      <h2>Seguimiento de Actividades</h2>
+      <div class="row my-3 g-3">
+        <div class="col-md-3"><select id="seg-filter-semana" class="form-select"><option value="">Semana</option></select></div>
+        <div class="col-md-3"><select id="seg-filter-distrito" class="form-select"><option value="">Distrito</option></select></div>
+        <div class="col-md-3"><input type="date" id="seg-filter-fecha" class="form-control"></div>
+        <div class="col-md-3"><button class="btn btn-primary" onclick="loadSeguimientoList()">Buscar</button></div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Seleccionar Registro a Actualizar</label>
+        <select id="seg-select-row" class="form-select" onchange="fillSeguimientoForm()"></select>
+      </div>
+
+      <form id="form-seguimiento" class="row g-3" onsubmit="handleSeguimiento(event)">
+        <div class="col-md-4"><label class="form-label">Día semana</label><input type="text" id="seg-dia" class="form-control" readonly></div>
+        <div class="col-md-4"><label class="form-label">Fecha Seguimiento</label><input type="date" id="seg-fechaseg" class="form-control" required></div>
+        <div class="col-md-4"><label class="form-label">Sede de la actividad</label><input type="text" id="seg-sede2" class="form-control" required></div>
+        <div class="col-md-6"><label class="form-label">Actividad de seguimiento</label><input type="text" id="seg-actividad2" class="form-control" required></div>
+        <div class="col-md-6">
+          <label class="form-label">Se llevó a cabo</label>
+          <select id="seg-hizo" class="form-select" required><option value="Sí">Sí</option><option value="No">No</option></select>
+        </div>
+        <div class="col-md-6"><label class="form-label">Acuerdos y compromisos</label><textarea id="seg-acuerdo" class="form-control" rows="2"></textarea></div>
+        <div class="col-md-6"><label class="form-label">Reprogramar actividad</label><textarea id="seg-reprogramar" class="form-control" rows="2"></textarea></div>
+        <div class="col-12"><button type="submit" class="btn btn-success">Guardar Seguimiento</button></div>
+      </form>
+    </div>
+
+    <!-- 6. VALIDACIÓN -->
+    <div id="page-validacion" class="page-section">
+      <h2>Validación de Actividades</h2>
+      <div class="row my-3 g-3">
+        <div class="col-md-4"><select id="val-filter-semana" class="form-select"><option value="">-- Semana --</option></select></div>
+        <div class="col-md-4"><select id="val-filter-distrito" class="form-select"><option value="">-- Distrito --</option></select></div>
+        <div class="col-md-4"><button class="btn btn-primary" onclick="loadValidacion()">Filtrar</button></div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm" id="table-val">
+          <thead class="table-dark">
+            <tr><th>Distrito</th><th>Semana</th><th>Día</th><th>Actividad</th><th>Análisis</th><th>Validación</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn btn-success mt-3" onclick="saveValidacion()">Guardar Validación</button>
+    </div>
+
+  </div>
+
+  <script>
+    // URL DE APPS SCRIPT
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwPzvku8YgrD94WXmuMKaCW7hQQv8ky9aeXp8BxVB_u2i3sSpyqQu0H2PdQFW_GRJhd/exec";
+
+    const distritos = [
+      "Distrito Tula", "Distrito Tulancingo", "Distrito Pachuca", "Distrito Huejutla",
+      "Distrito Mineral de la Reforma", "Distrito Tizayuca", "Distrito Actopan",
+      "Distrito Ixmiquilpan", "Distrito Zacualtipán", "Distrito Apan", "Distrito Huichapan", "Distrito Jalaca"
+    ];
+
+    const acciones = [
+      "Juntas comunitarias", "3 x mi salud", "A Salvo", "Salud mental y adicciones",
+      "Fortalecimiento a vacunación", "Guardianes comunitarios", "Jornada intensiva de salud",
+      "Jornada por la paz", "Otros."
+    ];
+
+    let currentUser = null;
+    let allData = [];
+    let localCaptures = [];
+
+    window.onload = function() {
+      populateDropdowns();
+    };
+
+    function populateDropdowns() {
+      // Distritos
+      const distSelects = ["cap-distrito", "vis-filter-distrito", "imp-filter-distrito", "seg-filter-distrito", "val-filter-distrito"];
+      distSelects.forEach(id => {
+        const sel = document.getElementById(id);
+        distritos.forEach(d => sel.add(new Option(d, d)));
+      });
+
+      // Semanas (1 a 48)
+      const semSelects = ["cap-semana", "vis-filter-semana", "imp-filter-semana", "seg-filter-semana", "val-filter-semana"];
+      semSelects.forEach(id => {
+        const sel = document.getElementById(id);
+        for(let i=1; i<=48; i++) sel.add(new Option(`Semana ${i}`, i));
+      });
+
+      // Acciones
+      document.querySelectorAll(".sel-accion").forEach(sel => {
+        sel.add(new Option("-- Seleccionar --", ""));
+        acciones.forEach(a => sel.add(new Option(a, a)));
+      });
+    }
+
+    // LOGIN & AUTENTICACIÓN
+    async function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById("login-user").value;
+      const p = document.getElementById("login-pass").value;
+
+      try {
+        const res = await fetch(`${SCRIPT_URL}?action=login&usuario=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`);
+        const data = await res.json();
+        if(data.success) {
+          currentUser = data;
+          document.getElementById("navbar").classList.remove("d-none");
+          document.getElementById("user-info").innerText = `${data.username} (${data.role})`;
+          setupPermissions(data.role);
+        } else {
+          alert(data.message);
+        }
+      } catch(err) {
+        alert("Error de conexión al autenticar.");
+      }
+    }
+
+    function setupPermissions(role) {
+      document.querySelectorAll(".nav-link").forEach(l => l.style.display = "none");
+      if(role === "Distrito") {
+        document.getElementById("nav-captura").style.display = "block";
+        document.getElementById("nav-visualizacion").style.display = "block";
+        document.getElementById("nav-impresion").style.display = "block";
+        showPage('captura');
+      } else if(role === "Validador") {
+        document.getElementById("nav-validacion").style.display = "block";
+        showPage('validacion');
+      } else if(role === "Administrador") {
+        document.querySelectorAll(".nav-link").forEach(l => l.style.display = "block");
+        showPage('captura');
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById("navbar").classList.add("d-none");
+      showPage('acceso');
+    }
+
+    function showPage(pageId) {
+      document.querySelectorAll(".page-section").forEach(s => s.classList.remove("active-section"));
+      document.getElementById(`page-${pageId}`).classList.add("active-section");
+    }
+
+    // 2. CAPTURA
+    async function handleCaptura(e) {
+      e.preventDefault();
+      const item = {
+        distrito: document.getElementById("cap-distrito").value,
+        semana: document.getElementById("cap-semana").value,
+        dia: document.getElementById("cap-dia").value,
+        fecha: document.getElementById("cap-fecha").value,
+        sede: document.getElementById("cap-sede").value,
+        actividad: document.getElementById("cap-actividad").value,
+        accion1: document.getElementById("cap-accion1").value,
+        accion2: document.getElementById("cap-accion2").value,
+        accion3: document.getElementById("cap-accion3").value,
+        equipo: document.getElementById("cap-equipo").value
+      };
+
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "saveCaptura", data: item })
+      });
+      const data = await res.json();
+      if(data.success) {
+        localCaptures.push(item);
+        renderCapturasLocal();
+        document.getElementById("form-captura").reset();
+        alert("Registro guardado con éxito.");
+      }
+    }
+
+    function renderCapturasLocal() {
+      const tbody = document.getElementById("table-captura").querySelector("tbody");
+      tbody.innerHTML = "";
+      localCaptures.forEach(c => {
+        tbody.innerHTML += `<tr><td>${c.distrito}</td><td>${c.semana}</td><td>${c.dia}</td><td>${c.fecha}</td><td>${c.sede}</td><td>${c.actividad}</td></tr>`;
+      });
+    }
+
+    // CARGAR DATOS GENERALES
+    async function fetchAllData() {
+      const res = await fetch(`${SCRIPT_URL}?action=getData`);
+      allData = await res.json();
+    }
+
+    // 3. VISUALIZACIÓN
+    async function loadVisualizacion() {
+      await fetchAllData();
+      const sem = document.getElementById("vis-filter-semana").value;
+      const dis = document.getElementById("vis-filter-distrito").value;
+      const filtered = allData.filter(d => (!sem || d.semana == sem) && (!dis || d.distrito == dis));
+      
+      const tbody = document.getElementById("table-vis").querySelector("tbody");
+      tbody.innerHTML = "";
+      filtered.forEach(d => {
+        tbody.innerHTML += `
+          <tr data-rowindex="${d.rowIndex}">
+            <td><input class="form-control form-control-sm" value="${d.distrito}"></td>
+            <td><input class="form-control form-control-sm" value="${d.semana}"></td>
+            <td><input class="form-control form-control-sm" value="${d.dia}"></td>
+            <td><input class="form-control form-control-sm" type="date" value="${d.fecha}"></td>
+            <td><input class="form-control form-control-sm" value="${d.sede}"></td>
+            <td><input class="form-control form-control-sm" value="${d.actividad}"></td>
+            <td><input class="form-control form-control-sm" value="${d.accion1}"></td>
+            <td><input class="form-control form-control-sm" value="${d.accion2}"></td>
+            <td><input class="form-control form-control-sm" value="${d.accion3}"></td>
+            <td><input class="form-control form-control-sm" value="${d.equipo}"></td>
+          </tr>`;
+      });
+    }
+
+    async function saveVisualizacion() {
+      const rows = [];
+      document.querySelectorAll("#table-vis tbody tr").forEach(tr => {
+        const inputs = tr.querySelectorAll("input");
+        rows.push({
+          rowIndex: tr.dataset.rowindex,
+          distrito: inputs[0].value, semana: inputs[1].value, dia: inputs[2].value,
+          fecha: inputs[3].value, sede: inputs[4].value, actividad: inputs[5].value,
+          accion1: inputs[6].value, accion2: inputs[7].value, accion3: inputs[8].value, equipo: inputs[9].value
+        });
+      });
+
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "updateData", rows: rows })
+      });
+      const data = await res.json();
+      if(data.success) alert("Modificaciones guardadas.");
+    }
+
+    // 4. IMPRESIÓN
+    async function loadImpresion() {
+      await fetchAllData();
+      const sem = document.getElementById("imp-filter-semana").value;
+      const dis = document.getElementById("imp-filter-distrito").value;
+      const filtered = allData.filter(d => (!sem || d.semana == sem) && (!dis || d.distrito == dis));
+      
+      const tbody = document.getElementById("table-imp").querySelector("tbody");
+      tbody.innerHTML = "";
+      filtered.forEach(d => {
+        tbody.innerHTML += `<tr><td>${d.distrito}</td><td>${d.semana}</td><td>${d.dia}</td><td>${d.fecha}</td><td>${d.sede}</td><td>${d.actividad}</td><td>${d.accion1}</td><td>${d.equipo}</td><td>${d.validacion}</td></tr>`;
+      });
+    }
+
+    function exportToExcel() {
+      const table = document.getElementById("table-imp");
+      const wb = XLSX.utils.table_to_book(table, {sheet: "Reporte"});
+      XLSX.writeFile(wb, "Reporte_Epidemiologico.xlsx");
+    }
+
+    // 5. SEGUIMIENTO
+    async function loadSeguimientoList() {
+      await fetchAllData();
+      const sem = document.getElementById("seg-filter-semana").value;
+      const dis = document.getElementById("seg-filter-distrito").value;
+      const fec = document.getElementById("seg-filter-fecha").value;
+      
+      const filtered = allData.filter(d => (!sem || d.semana == sem) && (!dis || d.distrito == dis) && (!fec || d.fecha == fec));
+      const sel = document.getElementById("seg-select-row");
+      sel.innerHTML = '<option value="">-- Seleccionar fila --</option>';
+      filtered.forEach(d => {
+        sel.add(new Option(`Fila ${d.rowIndex}: ${d.distrito} - ${d.actividad} (${d.fecha})`, JSON.stringify(d)));
+      });
+    }
+
+    function fillSeguimientoForm() {
+      const val = document.getElementById("seg-select-row").value;
+      if(!val) return;
+      const item = JSON.parse(val);
+      document.getElementById("seg-dia").value = item.dia;
+      document.getElementById("seg-fechaseg").value = item.fechaseg || "";
+      document.getElementById("seg-sede2").value = item.sede2 || "";
+      document.getElementById("seg-actividad2").value = item.actividad2 || "";
+      document.getElementById("seg-hizo").value = item.hizo || "Sí";
+      document.getElementById("seg-acuerdo").value = item.acuerdo || "";
+      document.getElementById("seg-reprogramar").value = item.reprogramar || "";
+    }
+
+    async function handleSeguimiento(e) {
+      e.preventDefault();
+      const val = document.getElementById("seg-select-row").value;
+      if(!val) return alert("Seleccione un registro.");
+      const item = JSON.parse(val);
+
+      const payload = {
+        rowIndex: item.rowIndex,
+        fechaseg: document.getElementById("seg-fechaseg").value,
+        sede2: document.getElementById("seg-sede2").value,
+        actividad2: document.getElementById("seg-actividad2").value,
+        hizo: document.getElementById("seg-hizo").value,
+        acuerdo: document.getElementById("seg-acuerdo").value,
+        reprogramar: document.getElementById("seg-reprogramar").value
+      };
+
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "updateSeguimiento", data: payload })
+      });
+      const data = await res.json();
+      if(data.success) alert("Seguimiento guardado exitosamente.");
+    }
+
+    // 6. VALIDACIÓN
+    async function loadValidacion() {
+      await fetchAllData();
+      const sem = document.getElementById("val-filter-semana").value;
+      const dis = document.getElementById("val-filter-distrito").value;
+      const filtered = allData.filter(d => (!sem || d.semana == sem) && (!dis || d.distrito == dis));
+      
+      const tbody = document.getElementById("table-val").querySelector("tbody");
+      tbody.innerHTML = "";
+      filtered.forEach(d => {
+        const valOptions = ["Validado", "Validado con Observaciones", "Modificar", "No Validado"]
+          .map(opt => `<option value="${opt}" ${d.validacion === opt ? 'selected' : ''}>${opt}</option>`).join('');
+
+        tbody.innerHTML += `
+          <tr data-rowindex="${d.rowIndex}">
+            <td>${d.distrito}</td>
+            <td>${d.semana}</td>
+            <td>${d.dia}</td>
+            <td>${d.actividad}</td>
+            <td><textarea class="form-control form-control-sm text-analisis">${d.analisis || ''}</textarea></td>
+            <td><select class="form-select form-select-sm sel-val">${valOptions}</select></td>
+          </tr>`;
+      });
+    }
+
+    async function saveValidacion() {
+      const rows = [];
+      document.querySelectorAll("#table-val tbody tr").forEach(tr => {
+        rows.push({
+          rowIndex: tr.dataset.rowindex,
+          analisis: tr.querySelector(".text-analisis").value,
+          validacion: tr.querySelector(".sel-val").value
+        });
+      });
+
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "updateValidacion", rows: rows })
+      });
+      const data = await res.json();
+      if(data.success) alert("Validaciones guardadas exitosamente.");
+    }
+  </script>
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
