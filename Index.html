@@ -281,7 +281,7 @@
   const p = document.getElementById("login-pass").value.trim();
 
   // Validar que se haya configurado la URL
-  if (!SCRIPT_URL || SCRIPT_URL.includes("REEMPLAZAR_CON_TU_URL")) {
+  if (!SCRIPT_URL || SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbwpNTOZ8GIIhsMErmw9gsdEF55cB8vGrVxyIGgSVZvtIbP2AaOtJ2UNMgwolVtaau7WHA/exec")) {
     alert("Error: Debes colocar tu URL válida de Google Apps Script en la variable SCRIPT_URL.");
     return;
   }
