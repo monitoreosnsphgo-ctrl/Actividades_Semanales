@@ -277,9 +277,37 @@
     // LOGIN & AUTENTICACIÓN
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1pV9kYZ7M2hnyS3blpq5PeJV8aHl_-KO4KSCDvDpOyeCmH2ZuRiFDuSpXp-Sx1M5T/exec";
 
+
+// Función auxiliar optimizada para evitar errores de CORS con Google Apps Script
+async function apiRequest(params = {}, method = "GET", bodyData = null) {
+  let url = SCRIPT_URL;
+  
+  if (method === "GET") {
+    const queryString = new URLSearchParams(params).toString();
+    url += (url.includes("?") ? "&" : "?") + queryString;
+  }
+
+  const options = {
+    method: method,
+    redirect: "follow" // Necesario para seguir las redirecciones de Google
+  };
+
+  if (method === "POST" && bodyData) {
+    // Usar text/plain evita que el navegador envíe una petición preflight OPTIONS que Apps Script no soporta
+    options.headers = { "Content-Type": "text/plain;charset=utf-8" };
+    options.body = JSON.stringify(bodyData);
+  }
+
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`Error HTTP: ${response.status}`);
+  }
+  return await response.json();
+}
+
+// Función de Iniciar Sesión actualizada
 async function handleLogin(e) {
   e.preventDefault();
-
   const user = document.getElementById("login-user").value.trim();
   const pass = document.getElementById("login-pass").value.trim();
   const btn = e.target.querySelector('button[type="submit"]');
@@ -288,14 +316,10 @@ async function handleLogin(e) {
   btn.innerText = "Verificando...";
 
   try {
-    // Petición directa al servidor
-    const url = `${SCRIPT_URL}?action=login&usuario=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`;
-    console.log("Conectando a:", url);
-
-    const response = await fetch(url);
-    const data = await response.json();
-
-    console.log("Respuesta recibida:", data);
+    console.log("Conectando a Google Apps Script...");
+    const data = await apiRequest({ action: "login", usuario: user, password: pass }, "GET");
+    
+    console.log("Respuesta del servidor:", data);
 
     if (data && data.success) {
       currentUser = data;
@@ -307,13 +331,13 @@ async function handleLogin(e) {
     }
   } catch (err) {
     console.error("Error en la conexión:", err);
-    alert("Error al conectar con la base de datos:\n" + err.message + "\n\nRevisa la consola del navegador (F12) para más detalles.");
+    alert("Error de conexión con la base de datos.\n\nAsegúrate de que en Google Apps Script la opción 'Quién tiene acceso' esté configurada como 'Cualquier persona'.");
   } finally {
     btn.disabled = false;
     btn.innerText = "Ingresar";
   }
 }
-
+    
     function setupPermissions(role) {
       document.querySelectorAll(".nav-link").forEach(l => l.style.display = "none");
       if(role === "Distrito") {
