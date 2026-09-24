@@ -276,25 +276,37 @@
 
     // LOGIN & AUTENTICACIÓN
     async function handleLogin(e) {
-      e.preventDefault();
-      const u = document.getElementById("login-user").value;
-      const p = document.getElementById("login-pass").value;
+  e.preventDefault();
+  const u = document.getElementById("login-user").value.trim();
+  const p = document.getElementById("login-pass").value.trim();
 
-      try {
-        const res = await fetch(`${SCRIPT_URL}?action=login&usuario=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`);
-        const data = await res.json();
-        if(data.success) {
-          currentUser = data;
-          document.getElementById("navbar").classList.remove("d-none");
-          document.getElementById("user-info").innerText = `${data.username} (${data.role})`;
-          setupPermissions(data.role);
-        } else {
-          alert(data.message);
-        }
-      } catch(err) {
-        alert("Error de conexión al autenticar.");
-      }
+  // Validar que se haya configurado la URL
+  if (!SCRIPT_URL || SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbySKuitvfJk9vxoevj9vNvrGIQS3Y4v7w_PY_WtfFtBLwwRmvNeNvVyrjC_y8G9Ju4c/exec")) {
+    alert("Error: Debes colocar tu URL válida de Google Apps Script en la variable SCRIPT_URL.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${SCRIPT_URL}?action=login&usuario=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`);
+    const data = await response.json();
+    
+    console.log("Respuesta recibida del servidor:", data); // Ver en F12 > Consola
+
+    if (data && data.success) {
+      currentUser = data;
+      document.getElementById("navbar").classList.remove("d-none");
+      document.getElementById("user-info").innerText = `${data.username} (${data.role})`;
+      setupPermissions(data.role);
+    } else {
+      // Captura el mensaje si existe, si no busca 'error' o muestra un mensaje por defecto
+      const errorMsg = data.message || data.error || "No se pudo autenticar con el servidor.";
+      alert("Error de acceso: " + errorMsg);
     }
+  } catch (err) {
+    console.error("Detalle del error:", err);
+    alert("Error de conexión al intentar autenticar. Revisa la consola del navegador (F12).");
+  }
+}
 
     function setupPermissions(role) {
       document.querySelectorAll(".nav-link").forEach(l => l.style.display = "none");
