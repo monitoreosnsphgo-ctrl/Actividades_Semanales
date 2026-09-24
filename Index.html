@@ -230,7 +230,7 @@
 
   <script>
     // URL DE APPS SCRIPT
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySKuitvfJk9vxoevj9vNvrGIQS3Y4v7w_PY_WtfFtBLwwRmvNeNvVyrjC_y8G9Ju4c/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1pV9kYZ7M2hnyS3blpq5PeJV8aHl_-KO4KSCDvDpOyeCmH2ZuRiFDuSpXp-Sx1M5T/exec";
 
     const distritos = [
       "Distrito Tula", "Distrito Tulancingo", "Distrito Pachuca", "Distrito Huejutla",
@@ -275,22 +275,27 @@
     }
 
     // LOGIN & AUTENTICACIÓN
-    async function handleLogin(e) {
-  e.preventDefault();
-  const u = document.getElementById("login-user").value.trim();
-  const p = document.getElementById("login-pass").value.trim();
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1pV9kYZ7M2hnyS3blpq5PeJV8aHl_-KO4KSCDvDpOyeCmH2ZuRiFDuSpXp-Sx1M5T/exec";
 
-  // Validar que se haya configurado la URL
-  if (!SCRIPT_URL || SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbySKuitvfJk9vxoevj9vNvrGIQS3Y4v7w_PY_WtfFtBLwwRmvNeNvVyrjC_y8G9Ju4c/exec")) {
-    alert("Error: Debes colocar tu URL válida de Google Apps Script en la variable SCRIPT_URL.");
-    return;
-  }
+async function handleLogin(e) {
+  e.preventDefault();
+
+  const user = document.getElementById("login-user").value.trim();
+  const pass = document.getElementById("login-pass").value.trim();
+  const btn = e.target.querySelector('button[type="submit"]');
+
+  btn.disabled = true;
+  btn.innerText = "Verificando...";
 
   try {
-    const response = await fetch(`${SCRIPT_URL}?action=login&usuario=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`);
+    // Petición directa al servidor
+    const url = `${SCRIPT_URL}?action=login&usuario=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`;
+    console.log("Conectando a:", url);
+
+    const response = await fetch(url);
     const data = await response.json();
-    
-    console.log("Respuesta recibida del servidor:", data); // Ver en F12 > Consola
+
+    console.log("Respuesta recibida:", data);
 
     if (data && data.success) {
       currentUser = data;
@@ -298,13 +303,14 @@
       document.getElementById("user-info").innerText = `${data.username} (${data.role})`;
       setupPermissions(data.role);
     } else {
-      // Captura el mensaje si existe, si no busca 'error' o muestra un mensaje por defecto
-      const errorMsg = data.message || data.error || "No se pudo autenticar con el servidor.";
-      alert("Error de acceso: " + errorMsg);
+      alert("Acceso denegado: " + (data.message || "Usuario o contraseña incorrectos."));
     }
   } catch (err) {
-    console.error("Detalle del error:", err);
-    alert("Error de conexión al intentar autenticar. Revisa la consola del navegador (F12).");
+    console.error("Error en la conexión:", err);
+    alert("Error al conectar con la base de datos:\n" + err.message + "\n\nRevisa la consola del navegador (F12) para más detalles.");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Ingresar";
   }
 }
 
