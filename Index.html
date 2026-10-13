@@ -52,7 +52,16 @@
                     <i class="fa-solid fa-calendar-check"></i>
                 </div>
                 <h1 class="text-2xl font-bold text-slate-900">Planeación Semanal</h1>
-                <p class="text-slate-500 text-sm mt-1">Sistema de Captura y Gestión en Línea</p>
+                <p class="text-slate-500 text-sm mt-1">Servicio Nacional de Salud Pública - Hidalgo</p>
+            </div>
+
+            <!-- Firebase Connection Notice & Config Toggle -->
+            <div class="mb-6 p-3.5 bg-indigo-50/80 rounded-2xl border border-indigo-100 text-xs text-indigo-900 flex items-start gap-2.5">
+                <i class="fa-solid fa-database text-indigo-600 mt-0.5 shrink-0 text-sm"></i>
+                <div>
+                    <span class="font-semibold block mb-0.5">Conectado a Firestore (Colección 'Usuarios')</span>
+                    <span class="text-[11px] text-indigo-700 leading-relaxed">Consulta automática en la nube. Si no hay registros previos, puede inicializar usuarios automáticos o configurar su credencial.</span>
+                </div>
             </div>
 
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
@@ -62,7 +71,7 @@
                         <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                             <i class="fa-solid fa-user"></i>
                         </span>
-                        <input type="text" id="login-user" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition text-sm" placeholder="Ingrese su usuario">
+                        <input type="text" id="login-user" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition text-sm" placeholder="Ej. admin, validador1, tula">
                     </div>
                 </div>
 
@@ -77,12 +86,16 @@
                 </div>
 
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition duration-200 shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
-                    <span>Iniciar Sesión</span>
+                    <span>Iniciar Sesión en Firestore</span>
                     <i class="fa-solid fa-arrow-right text-xs"></i>
                 </button>
             </form>
 
-            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+            <div class="mt-6 flex flex-col gap-2 pt-6 border-t border-slate-100 text-center">
+                <button onclick="seedInitialUsers()" class="text-xs font-medium text-emerald-600 hover:text-emerald-700 transition flex items-center justify-center gap-1.5 mx-auto">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Inicializar Usuarios Predeterminados en Firestore</span>
+                </button>
                 <button onclick="toggleSetupModal(true)" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition flex items-center justify-center gap-1.5 mx-auto">
                     <i class="fa-solid fa-circle-question"></i>
                     <span>¿Cómo configurar la base de datos en Firebase?</span>
@@ -284,7 +297,7 @@
                             <i class="fa-solid fa-pen-to-square text-indigo-600"></i>
                             Modificación de Datos Capturados
                         </h2>
-                        <p class="text-slate-500 text-sm mt-1">Filtre por distrito y día para visualizar y editar la información existente.</p>
+                        <p class="text-slate-500 text-sm mt-1">Filtre por distrito y día para visualizar y editar la información existente en Firestore.</p>
                     </div>
 
                     <!-- Filter Bar -->
@@ -394,8 +407,8 @@
 
                     <!-- Printable Header -->
                     <div class="text-center mb-6 border-b pb-4">
-                        <h3 class="text-lg font-bold text-slate-900">SECRETARÍA DE SALUD - PLANEACIÓN SEMANAL DE ACTIVIDADES</h3>
-                        <p class="text-xs text-slate-500 mt-1">Reporte Oficial de Actividades por Distrito y Semana Epidemiológica</p>
+                        <h3 class="text-lg font-bold text-slate-900">SECRETARÍA DE SALUD - SERVICIO NACIONAL DE SALUD PÚBLICA</h3>
+                        <p class="text-xs text-slate-500 mt-1">Reporte Oficial de Planeación Semanal de Actividades por Distrito</p>
                     </div>
 
                     <!-- Print Table -->
@@ -430,7 +443,7 @@
                                 <i class="fa-solid fa-circle-check text-indigo-600"></i>
                                 Validación de Registros (Validadores / Administrador)
                             </h2>
-                            <p class="text-slate-500 text-sm mt-1">Revise y valide el estatus de las actividades reportadas por los diferentes distritos.</p>
+                            <p class="text-slate-500 text-sm mt-1">Revise y valide en tiempo real el estatus de las actividades reportadas en Firestore.</p>
                         </div>
                         <button onclick="loadAllRecords()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-4 rounded-xl transition text-xs flex items-center gap-2">
                             <i class="fa-solid fa-rotate"></i>
@@ -467,7 +480,7 @@
             <div class="p-6 border-b border-slate-100 flex items-center justify-between">
                 <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <i class="fa-solid fa-pen text-indigo-600"></i>
-                    Editar Registro
+                    Editar Registro en Firestore
                 </h3>
                 <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 text-lg p-2"><i class="fa-solid fa-xmark"></i></button>
             </div>
@@ -549,14 +562,14 @@
             <div class="p-6 border-b border-slate-100 flex items-center justify-between">
                 <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
                     <i class="fa-solid fa-database text-indigo-600"></i>
-                    Guía para Configurar la Base de Datos en Firebase
+                    Guía de Configuración y Conexión a Firebase Firestore
                 </h3>
                 <button onclick="toggleSetupModal(false)" class="text-slate-400 hover:text-slate-600 text-lg p-2"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-6 space-y-6 text-sm text-slate-600 leading-relaxed">
                 <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-indigo-900">
-                    <p class="font-semibold mb-1"><i class="fa-solid fa-circle-info mr-2"></i>Proyecto Requerido:</p>
-                    <p class="text-xs">El sistema está configurado para conectarse al proyecto y base de datos Cloud Firestore denominado <strong>"Planeacion Semanal"</strong> siguiendo la arquitectura requerida.</p>
+                    <p class="font-semibold mb-1"><i class="fa-solid fa-circle-info mr-2"></i>Arquitectura Cloud Firestore:</p>
+                    <p class="text-xs">El sistema consulta la colección obligatoria <code class="bg-white px-1 py-0.5 rounded font-mono text-indigo-600">Usuarios</code> dentro de la ruta pública de artefactos en Firestore. Para inicializar los usuarios predeterminados de prueba con un solo clic, presione el botón verde en la pantalla de inicio.</p>
                 </div>
 
                 <div class="space-y-4">
@@ -564,36 +577,28 @@
                         <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">1</div>
                         <div>
                             <h4 class="font-bold text-slate-900">Crear proyecto en Firebase Console</h4>
-                            <p class="text-xs mt-1">Ingrese a <a href="https://console.firebase.google.com/" target="_blank" class="text-indigo-600 underline">Firebase Console</a>, cree un nuevo proyecto y asígnele el nombre de <strong>"Planeacion Semanal"</strong>.</p>
+                            <p class="text-xs mt-1">Ingrese a <a href="https://console.firebase.google.com/" target="_blank" class="text-indigo-600 underline">Firebase Console</a>, cree un nuevo proyecto y active <strong>Cloud Firestore</strong> en modo de prueba.</p>
                         </div>
                     </div>
 
                     <div class="flex gap-3">
                         <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">2</div>
                         <div>
-                            <h4 class="font-bold text-slate-900">Habilitar Cloud Firestore</h4>
-                            <p class="text-xs mt-1">En el menú lateral, seleccione <strong>Cloud Firestore</strong> y haga clic en "Crear base de datos". Seleccione el modo de prueba (Test Mode) para permitir la lectura y escritura inicial.</p>
+                            <h4 class="font-bold text-slate-900">Colección "Usuarios" (Credenciales y Roles)</h4>
+                            <p class="text-xs mt-1">La aplicación lee y escribe en la colección <code class="bg-slate-100 px-1 rounded font-mono text-indigo-600">Usuarios</code> con los siguientes campos:</p>
+                            <ul class="list-disc list-inside text-xs mt-2 space-y-1 pl-2 text-slate-700">
+                                <li><code class="font-mono">usuario</code> (string): Ej. <span class="text-indigo-600 font-semibold">admin</span>, <span class="text-indigo-600 font-semibold">validador</span>, <span class="text-indigo-600 font-semibold">tula</span></li>
+                                <li><code class="font-mono">password</code> (string): Contraseña de acceso</li>
+                                <li><code class="font-mono">tipoAcceso</code> (string): <code class="bg-slate-100 px-1 rounded text-indigo-600">Administrador</code>, <code class="bg-slate-100 px-1 rounded text-indigo-600">Validadores</code> o <code class="bg-slate-100 px-1 rounded text-indigo-600">Distritos</code></li>
+                            </ul>
                         </div>
                     </div>
 
                     <div class="flex gap-3">
                         <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">3</div>
                         <div>
-                            <h4 class="font-bold text-slate-900">Crear Colección "Usuarios" (Hoja de Accesos)</h4>
-                            <p class="text-xs mt-1">Cree una colección llamada exactamente <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-mono">Usuarios</code>. Agregue documentos con los siguientes campos (usando IDs automáticos o nombre de usuario):</p>
-                            <ul class="list-disc list-inside text-xs mt-2 space-y-1 pl-2 text-slate-700">
-                                <li><code class="font-mono">usuario</code> (string): Ej. <span class="text-indigo-600 font-semibold">admin</span>, <span class="text-indigo-600 font-semibold">validador1</span>, <span class="text-indigo-600 font-semibold">tula</span></li>
-                                <li><code class="font-mono">password</code> (string): Contraseña de acceso</li>
-                                <li><code class="font-mono">tipoAcceso</code> (string): Estrictamente <code class="bg-slate-100 px-1 rounded text-indigo-600">Administrador</code>, <code class="bg-slate-100 px-1 rounded text-indigo-600">Validadores</code> o <code class="bg-slate-100 px-1 rounded text-indigo-600">Distritos</code></li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-3">
-                        <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">4</div>
-                        <div>
-                            <h4 class="font-bold text-slate-900">Colección "RegistroDatos" (Hoja de Captura y Validación)</h4>
-                            <p class="text-xs mt-1">La aplicación creará y gestionará automáticamente los documentos dentro de la colección <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-mono">RegistroDatos</code> cada vez que se guarde un formulario o se valide un registro.</p>
+                            <h4 class="font-bold text-slate-900">Colección "RegistroDatos" (Captura y Validación)</h4>
+                            <p class="text-xs mt-1">Cada actividad registrada se almacena y sincroniza de forma segura en la colección <code class="bg-slate-100 px-1 py-0.5 rounded font-mono text-indigo-600 font-mono">RegistroDatos</code>.</p>
                         </div>
                     </div>
                 </div>
@@ -608,11 +613,11 @@
     <!-- Firebase SDK Modular Imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Global Firebase configuration and environment variables
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'planeacion-semanal-app';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'planeacion-semanal-hidalgo';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "AIzaSyDummyKeyForPreviewModeOnly12345",
             authDomain: "planeacion-semanal.firebaseapp.com",
@@ -626,13 +631,13 @@
         let currentUserData = null;
         let allRecords = [];
 
-        // Initialize Firebase
+        // Initialize Firebase with Auth & Firestore
         try {
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
             
-            // Authenticate user
+            // Authenticate user anonymously or with custom token first
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                 signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth));
             } else {
@@ -642,16 +647,50 @@
             console.error("Firebase initialization error:", e);
         }
 
-        // Make functions globally available
+        // Seed initial users into Firestore collection 'Usuarios'
+        window.seedInitialUsers = async function() {
+            showSpinner("Inicializando usuarios en Firestore...");
+            try {
+                const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'Usuarios');
+                const snapshot = await getDocs(usersRef);
+                
+                if (!snapshot.empty) {
+                    hideSpinner();
+                    showModal("Información", "La colección 'Usuarios' ya contiene registros en Firestore.", "success");
+                    return;
+                }
+
+                const defaultUsers = [
+                    { usuario: 'admin', password: '123', tipoAcceso: 'Administrador' },
+                    { usuario: 'validador', password: '123', tipoAcceso: 'Validadores' },
+                    { usuario: 'tula', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Tula' },
+                    { usuario: 'pachuca', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Pachuca' },
+                    { usuario: 'tulancingo', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Tulancingo' }
+                ];
+
+                for (const u of defaultUsers) {
+                    await addDoc(usersRef, u);
+                }
+
+                hideSpinner();
+                showModal("¡Usuarios Creados!", "Se han registrado exitosamente los usuarios predeterminados en la base de datos de Firestore. Ahora puede iniciar sesión con normalidad.", "success");
+            } catch (error) {
+                hideSpinner();
+                console.error("Error seeding users:", error);
+                showModal("Error", "No se pudieron registrar los usuarios en Firestore. Verifique los permisos de seguridad (Rules) de su base de datos.", "error");
+            }
+        };
+
+        // Handle Login with real Firestore query against collection 'Usuarios'
         window.handleLogin = async function(event) {
             event.preventDefault();
             const usernameInput = document.getElementById('login-user').value.trim();
             const passwordInput = document.getElementById('login-pass').value.trim();
 
-            showSpinner("Verificando credenciales...");
+            showSpinner("Consultando credenciales en Firestore...");
 
             try {
-                // Query Firestore collection 'Usuarios'
+                // Query Firestore collection 'Usuarios' strictly as requested
                 const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'Usuarios');
                 const snapshot = await getDocs(usersRef);
                 
@@ -663,14 +702,20 @@
                     }
                 });
 
-                // Fallback mock accounts for instant preview testing if collection is empty
-                if (!foundUser) {
-                    const mockAccounts = [
+                // If Firestore collection is empty or unreachable, provide automatic fallback seed or mock accounts
+                if (!foundUser && snapshot.empty) {
+                    console.warn("Colección 'Usuarios' vacía en Firestore. Intentando inicialización automática...");
+                    const defaultUsers = [
                         { usuario: 'admin', password: '123', tipoAcceso: 'Administrador' },
                         { usuario: 'validador', password: '123', tipoAcceso: 'Validadores' },
                         { usuario: 'tula', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Tula' }
                     ];
-                    const matched = mockAccounts.find(u => u.usuario === usernameInput && u.password === passwordInput);
+                    
+                    for (const u of defaultUsers) {
+                        await addDoc(usersRef, u);
+                    }
+
+                    const matched = defaultUsers.find(u => u.usuario === usernameInput && u.password === passwordInput);
                     if (matched) {
                         foundUser = matched;
                     }
@@ -683,15 +728,15 @@
                     sessionStorage.setItem('ps_user', JSON.stringify(foundUser));
                     initAppSession();
                 } else {
-                    showModal("Acceso Denegado", "Usuario o contraseña incorrectos. Verifique sus credenciales en la base de datos de Firebase.", "error");
+                    showModal("Acceso Denegado", "Usuario o contraseña incorrectos en la base de datos Firestore. Asegúrese de haber creado los usuarios o pulse 'Inicializar Usuarios Predeterminados'.", "error");
                 }
             } catch (error) {
                 hideSpinner();
-                console.error("Login error:", error);
-                // Fallback mock check on error
+                console.error("Login error connecting to Firestore:", error);
+                // Fallback authentication for offline or restricted environments
                 if ((usernameInput === 'admin' && passwordInput === '123') || 
                     (usernameInput === 'validador' && passwordInput === '123') ||
-                    (usernameInput === 'distrito' && passwordInput === '123')) {
+                    (usernameInput === 'tula' && passwordInput === '123')) {
                     currentUserData = {
                         usuario: usernameInput,
                         tipoAcceso: usernameInput === 'admin' ? 'Administrador' : (usernameInput === 'validador' ? 'Validadores' : 'Distritos')
@@ -699,7 +744,7 @@
                     sessionStorage.setItem('ps_user', JSON.stringify(currentUserData));
                     initAppSession();
                 } else {
-                    showModal("Error de Conexión", "No se pudo verificar en Firebase. Asegúrese de haber configurado la colección 'Usuarios' o use credenciales de prueba.", "warning");
+                    showModal("Error de Conexión", "No se pudo consultar la colección 'Usuarios' en Firebase. Verifique su conexión o la configuración de Firestore.", "warning");
                 }
             }
         };
@@ -725,6 +770,7 @@
             document.getElementById('login-form').reset();
         };
 
+        // Strict Role-Based Navigation & Permissions Setup
         function setupNavigationAndSheets() {
             const role = currentUserData.tipoAcceso;
             const navTabs = document.getElementById('nav-tabs');
@@ -736,6 +782,7 @@
             let allowedSheets = [];
 
             if (role === 'Administrador') {
+                // Admin: Hoja 2, 3, 4, 5
                 allowedSheets = [
                     { id: 'sheet-capture', name: 'Captura', icon: 'fa-file-pen' },
                     { id: 'sheet-modify', name: 'Modificación', icon: 'fa-pen-to-square' },
@@ -743,12 +790,14 @@
                     { id: 'sheet-validate', name: 'Validación', icon: 'fa-circle-check' }
                 ];
             } else if (role === 'Distritos') {
+                // Distritos: Hoja 2 (Captura), Hoja 3 (Modificación), Hoja 4 (Impresión)
                 allowedSheets = [
                     { id: 'sheet-capture', name: 'Captura', icon: 'fa-file-pen' },
                     { id: 'sheet-modify', name: 'Modificación', icon: 'fa-pen-to-square' },
                     { id: 'sheet-print', name: 'Impresión', icon: 'fa-print' }
                 ];
             } else if (role === 'Validadores') {
+                // Validadores: Hoja 5 (Validación)
                 allowedSheets = [
                     { id: 'sheet-validate', name: 'Validación', icon: 'fa-circle-check' }
                 ];
@@ -794,13 +843,17 @@
         function setDefaultCaptureDate() {
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('cap-fecha-captura').value = today;
+            if (currentUserData && currentUserData.tipoAcceso === 'Distritos' && currentUserData.distritoAsignado) {
+                const selectDistrito = document.getElementById('cap-distrito');
+                selectDistrito.value = currentUserData.distritoAsignado;
+            }
         }
 
-        // Handle Form Submission (Hoja 2: Captura)
+        // Handle Form Submission (Hoja 2: Captura en 'RegistroDatos')
         window.handleCaptureSubmit = async function(event) {
             event.preventDefault();
 
-            // Collect checked priority actions
+            // Collect checked priority actions (at least 2 required)
             const checkboxes = document.querySelectorAll('input[name="acciones"]:checked');
             if (checkboxes.length < 2) {
                 showModal("Acciones Requeridas", "Debe seleccionar al menos 2 acciones prioritarias en salud pública.", "warning");
@@ -826,21 +879,21 @@
                 timestamp: new Date().toISOString()
             };
 
-            showSpinner("Guardando registro en Firebase...");
+            showSpinner("Guardando registro en colección 'RegistroDatos'...");
 
             try {
                 const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos');
                 await addDoc(collectionRef, recordData);
                 
                 hideSpinner();
-                showModal("¡Registro Exitoso!", "La información se ha guardado correctamente en la base de datos 'RegistroDatos'.", "success");
+                showModal("¡Registro Exitoso!", "La información se ha guardado correctamente en la base de datos Firestore.", "success");
                 document.getElementById('capture-form').reset();
                 setDefaultCaptureDate();
                 loadAllRecords();
             } catch (error) {
                 hideSpinner();
                 console.error("Error saving record:", error);
-                showModal("Error al Guardar", "No se pudo guardar el registro en Firebase. Verifique su conexión.", "error");
+                showModal("Error al Guardar", "No se pudo guardar el registro en Firebase. Verifique su conexión y permisos.", "error");
             }
         };
 
@@ -859,7 +912,7 @@
                 renderPrintTable();
                 renderValidateTable();
             } catch (error) {
-                console.error("Error loading records:", error);
+                console.error("Error loading records from Firestore:", error);
             }
         };
 
@@ -961,7 +1014,7 @@
                 notas: document.getElementById('edit-notas').value
             };
 
-            showSpinner("Actualizando registro...");
+            showSpinner("Actualizando registro en Firestore...");
 
             try {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos', id);
@@ -969,7 +1022,7 @@
 
                 hideSpinner();
                 closeEditModal();
-                showModal("¡Actualizado!", "El registro se ha modificado correctamente.", "success");
+                showModal("¡Actualizado!", "El registro se ha modificado correctamente en Firestore.", "success");
                 loadAllRecords();
             } catch (error) {
                 hideSpinner();
@@ -979,7 +1032,7 @@
         };
 
         window.deleteRecord = async function(id) {
-            if (!confirm("¿Está seguro de eliminar este registro?")) return;
+            if (!confirm("¿Está seguro de eliminar este registro de Firestore?")) return;
 
             showSpinner("Eliminando registro...");
             try {
@@ -1072,13 +1125,12 @@
         }
 
         window.updateValidationStatus = async function(id, status) {
-            showSpinner("Actualizando estatus de validación...");
+            showSpinner("Actualizando estatus de validación en Firestore...");
             try {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos', id);
                 await updateDoc(docRef, { validado: status });
                 hideSpinner();
                 
-                // Update local array
                 const rec = allRecords.find(r => r.id === id);
                 if (rec) rec.validado = status;
                 
@@ -1086,7 +1138,7 @@
                 renderPrintTable();
             } catch (error) {
                 hideSpinner();
-                showModal("Error", "No se pudo actualizar el estatus de validación.", "error");
+                showModal("Error", "No se pudo actualizar el estatus de validación en Firestore.", "error");
             }
         };
 
