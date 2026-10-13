@@ -3,533 +3,467 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planeación Semanal - Sistema de Gestión</title>
+    <title>Planeación Semanal - SNSP Hidalgo</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for Icons -->
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- SheetJS for Excel Export -->
+    <!-- SheetJS (xlsx) para exportación a Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- Firebase SDK Compat (v10) para máxima compatibilidad en HTML único -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        @media print {
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            body { background: white !important; color: black !important; }
-            .print-container { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
-        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
 
-    <!-- Custom Modal for Alerts/Messages -->
-    <div id="custom-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden border border-slate-100 transform transition-all">
-            <div class="p-6 text-center">
-                <div id="modal-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"></div>
-                <h3 id="modal-title" class="text-xl font-bold text-slate-900 mb-2">Título</h3>
-                <p id="modal-message" class="text-slate-600 text-sm mb-6 leading-relaxed">Mensaje descriptivo aquí.</p>
-                <div id="modal-actions" class="flex justify-center gap-3">
-                    <button id="modal-ok-btn" onclick="closeModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl transition shadow-lg shadow-indigo-600/20">Aceptar</button>
+    <!-- CONFIGURACIÓN DE FIREBASE (Modifica con tus credenciales de tu proyecto) -->
+    <script>
+        // ¡IMPORTANTE! Reemplaza estos valores con la configuración de tu consola de Firebase
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY",
+            authDomain: "tu-proyecto.firebaseapp.com",
+            projectId: "planeacion-semanal",
+            storageBucket: "tu-proyecto.appspot.com",
+            messagingSenderId: "TU_SENDER_ID",
+            appId: "TU_APP_ID"
+        };
+
+        // Inicializar Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+    </script>
+
+    <!-- BARRA SUPERIOR INSTITUCIONAL -->
+    <header class="bg-emerald-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-hospital-user text-2xl text-emerald-300"></i>
+                <div>
+                    <h1 class="text-lg font-bold">Servicio Nacional de Salud Pública de Hidalgo</h1>
+                    <p class="text-xs text-emerald-200">Sistema de Gestión y Planeación Semanal</p>
                 </div>
+            </div>
+            <div id="userInfoHeader" class="hidden items-center space-x-4 mt-2 sm:mt-0">
+                <span id="lblUserRole" class="bg-emerald-800 px-3 py-1 rounded-full text-xs font-semibold text-emerald-100 border border-emerald-700"></span>
+                <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-medium transition flex items-center space-x-1 shadow">
+                    <i class="fa-solid fa-right-from-bracket"></i> <span>Salir del Sistema</span>
+                </button>
             </div>
         </div>
-    </div>
+    </header>
 
-    <!-- Loading Spinner Overlay -->
-    <div id="loading-spinner" class="fixed inset-0 bg-slate-900/30 backdrop-blur-[2px] z-50 flex items-center justify-center hidden">
-        <div class="bg-white p-5 rounded-2xl shadow-xl flex items-center gap-4 border border-slate-100">
-            <div class="animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
-            <span class="font-medium text-slate-700" id="loading-text">Procesando solicitud...</span>
+    <!-- NAVEGACIÓN PRINCIPAL (DINÁMICA POR ROL) -->
+    <nav id="mainNav" class="bg-white shadow border-b border-slate-200 hidden">
+        <div class="max-w-7xl mx-auto px-4 flex space-x-1 sm:space-x-4 overflow-x-auto">
+            <button onclick="switchTab('hojaCaptura')" id="nav-hojaCaptura" class="nav-btn py-3 px-4 border-b-2 font-medium text-sm flex items-center space-x-2 border-transparent text-slate-600 hover:text-emerald-700">
+                <i class="fa-solid fa-pen-to-square"></i><span>2. Captura</span>
+            </button>
+            <button onclick="switchTab('hojaModificacion')" id="nav-hojaModificacion" class="nav-btn py-3 px-4 border-b-2 font-medium text-sm flex items-center space-x-2 border-transparent text-slate-600 hover:text-emerald-700">
+                <i class="fa-solid fa-pen-clip"></i><span>3. Modificación</span>
+            </button>
+            <button onclick="switchTab('hojaImpresion')" id="nav-hojaImpresion" class="nav-btn py-3 px-4 border-b-2 font-medium text-sm flex items-center space-x-2 border-transparent text-slate-600 hover:text-emerald-700">
+                <i class="fa-solid fa-print"></i><span>4. Impresión / Reportes</span>
+            </button>
+            <button onclick="switchTab('hojaValidacion')" id="nav-hojaValidacion" class="nav-btn py-3 px-4 border-b-2 font-medium text-sm flex items-center space-x-2 border-transparent text-slate-600 hover:text-emerald-700">
+                <i class="fa-solid fa-check-double"></i><span>5. Validación</span>
+            </button>
         </div>
-    </div>
+    </nav>
 
-    <!-- HOJA 1: Login / Acceso -->
-    <div id="view-login" class="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 min-h-screen">
-        <div class="max-w-md w-full bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-white/20">
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-600/30 text-white text-2xl font-bold">
-                    <i class="fa-solid fa-calendar-check"></i>
+    <!-- CONTENEDOR PRINCIPAL DE HOJAS -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+
+        <!-- HOJA 1: ACCESO / LOGIN -->
+        <section id="hojaAcceso" class="tab-content active max-w-md mx-auto bg-white rounded-xl shadow-lg border border-slate-200 p-8 mt-10">
+            <div class="text-center mb-6">
+                <div class="bg-emerald-100 text-emerald-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    <i class="fa-solid fa-lock text-2xl"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-slate-900">Planeación Semanal</h1>
-                <p class="text-slate-500 text-sm mt-1">Servicio Nacional de Salud Pública - Hidalgo</p>
+                <h2 class="text-2xl font-bold text-slate-900">Acceso al Sistema</h2>
+                <p class="text-sm text-slate-500 mt-1">Ingrese sus credenciales institucionales</p>
             </div>
 
-            <!-- Firebase Connection Notice -->
-            <div class="mb-6 p-3.5 bg-indigo-50/80 rounded-2xl border border-indigo-100 text-xs text-indigo-900 flex items-start gap-2.5">
-                <i class="fa-solid fa-database text-indigo-600 mt-0.5 shrink-0 text-sm"></i>
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
-                    <span class="font-semibold block mb-0.5">Base de Datos Firestore (Colección 'Usuarios')</span>
-                    <span class="text-[11px] text-indigo-700 leading-relaxed">Conexión directa en la nube. Si no existen registros previos, pulse el botón inferior para inicializar automáticamente las credenciales institucionales.</span>
-                </div>
-            </div>
-
-            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Usuario</label>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Usuario</label>
                     <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                            <i class="fa-solid fa-user"></i>
-                        </span>
-                        <input type="text" id="login-user" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition text-sm" placeholder="Ej. admin, validador, tula">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" id="loginUser" required class="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Ej. admin, validador, tula">
                     </div>
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Contraseña</label>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Contraseña</label>
                     <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                            <i class="fa-solid fa-lock"></i>
-                        </span>
-                        <input type="password" id="login-pass" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition text-sm" placeholder="••••••••">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-solid fa-key"></i></span>
+                        <input type="password" id="loginPass" required class="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="••••••••">
                     </div>
                 </div>
-
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition duration-200 shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
-                    <span>Iniciar Sesión en Firestore</span>
-                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg shadow transition text-sm">
+                    Ingresar al Sistema
                 </button>
             </form>
 
-            <div class="mt-6 flex flex-col gap-2.5 pt-6 border-t border-slate-100 text-center">
-                <button onclick="seedInitialUsers()" class="text-xs font-medium text-emerald-600 hover:text-emerald-700 transition flex items-center justify-center gap-1.5 mx-auto bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100 w-full">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <span>Inicializar Usuarios en Firebase</span>
+            <div class="mt-6 pt-6 border-t border-slate-100 text-center">
+                <button onclick="initDefaultUsersInFirebase()" class="text-xs text-emerald-700 hover:underline font-medium">
+                    <i class="fa-solid fa-database mr-1"></i> Inicializar Usuarios Predeterminados en Firestore
                 </button>
-                <button onclick="toggleSetupModal(true)" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition flex items-center justify-center gap-1.5 mx-auto">
-                    <i class="fa-solid fa-circle-question"></i>
-                    <span>¿Cómo configurar la base de datos en Firebase?</span>
-                </button>
+                <p id="initStatus" class="text-xs text-slate-500 mt-1"></p>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- MAIN APP LAYOUT (Hidden until login) -->
-    <div id="main-app" class="flex-1 flex flex-col hidden">
-        <!-- Top Navigation Bar -->
-        <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm no-print">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-600/20 font-bold">
-                        <i class="fa-solid fa-calendar-days"></i>
-                    </div>
-                    <div>
-                        <span class="font-bold text-slate-900 block leading-tight">Planeación Semanal</span>
-                        <span id="user-role-badge" class="text-xs font-semibold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full inline-block mt-0.5">Rol</span>
+        <!-- HOJA 2: CAPTURA -->
+        <section id="hojaCaptura" class="tab-content bg-white rounded-xl shadow border border-slate-200 p-6">
+            <div class="border-b pb-4 mb-6 flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-pen-to-square text-emerald-700 mr-2"></i>Hoja de Captura de Actividades</h2>
+                    <p class="text-xs text-slate-500">Registro semanal de actividades por distrito en la base de datos "RegistroDatos".</p>
+                </div>
+                <button onclick="logout()" class="text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded font-medium"><i class="fa-solid fa-right-from-bracket mr-1"></i> Salir</button>
+            </div>
+
+            <form id="captureForm" onsubmit="saveCaptureData(event)" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Fecha de Captura</label>
+                    <input type="date" id="capFechaCaptura" required class="w-full p-2.5 border rounded-lg text-sm bg-slate-50" readonly>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Nombre del Distrito</label>
+                    <select id="capDistrito" required class="w-full p-2.5 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500">
+                        <option value="">Seleccione Distrito...</option>
+                        <option value="Distrito Tula">Distrito Tula</option>
+                        <option value="Distrito Tulancingo">Distrito Tulancingo</option>
+                        <option value="Distrito Pachuca">Distrito Pachuca</option>
+                        <option value="Distrito Huejutla">Distrito Huejutla</option>
+                        <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
+                        <option value="Distrito Tizayuca">Distrito Tizayuca</option>
+                        <option value="Distrito Actopan">Distrito Actopan</option>
+                        <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
+                        <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
+                        <option value="Distrito Apan">Distrito Apan</option>
+                        <option value="Distrito Huichapan">Distrito Huichapan</option>
+                        <option value="Distrito Jacala">Distrito Jacala</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Periodo Programado</label>
+                    <input type="text" id="capPeriodo" required placeholder="Ej. 20-25 Septiembre 2026" class="w-full p-2.5 border rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Semana Epidemiológica</label>
+                    <input type="number" id="capSemana" min="1" max="52" required placeholder="Ej. 38" class="w-full p-2.5 border rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Día de la Actividad</label>
+                    <select id="capDia" required class="w-full p-2.5 border rounded-lg text-sm bg-white">
+                        <option value="">Seleccione Día...</option>
+                        <option value="Lunes">Lunes</option>
+                        <option value="Martes">Martes</option>
+                        <option value="Miércoles">Miércoles</option>
+                        <option value="Jueves">Jueves</option>
+                        <option value="Viernes">Viernes</option>
+                        <option value="Sábado">Sábado</option>
+                        <option value="Domingo">Domingo</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Fecha de la Actividad</label>
+                    <input type="date" id="capFechaActividad" required class="w-full p-2.5 border rounded-lg text-sm">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Sede de la Actividad</label>
+                    <input type="text" id="capSede" required placeholder="Lugar, Centro de Salud, Comunidad o Municipio" class="w-full p-2.5 border rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Requiere Grupo Itinerante</label>
+                    <select id="capItinerante" required class="w-full p-2.5 border rounded-lg text-sm bg-white">
+                        <option value="No">No</option>
+                        <option value="Sí">Sí</option>
+                    </select>
+                </div>
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Actividad Programada</label>
+                    <textarea id="capActividad" rows="2" required placeholder="Descripción de la actividad..." class="w-full p-2.5 border rounded-lg text-sm"></textarea>
+                </div>
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-2">Acciones Prioritarias (Seleccione al menos 2)</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 p-3 bg-slate-50 rounded-lg border">
+                        <label class="flex items-center space-x-2 text-sm"><input type="checkbox" name="accionPrioritaria" value="Juntas Comunitarias" class="rounded text-emerald-600 focus:ring-emerald-500"> <span>Juntas Comunitarias</span></label>
+                        <label class="flex items-center space-x-2 text-sm"><input type="checkbox" name="accionPrioritaria" value="Jornadas Intensivas" class="rounded text-emerald-600 focus:ring-emerald-500"> <span>Jornadas Intensivas</span></label>
+                        <label class="flex items-center space-x-2 text-sm"><input type="checkbox" name="accionPrioritaria" value="Guardianes Comunitarios" class="rounded text-emerald-600 focus:ring-emerald-500"> <span>Guardianes Comunitarios</span></label>
+                        <label class="flex items-center space-x-2 text-sm"><input type="checkbox" name="accionPrioritaria" value="3xmi Salud" class="rounded text-emerald-600 focus:ring-emerald-500"> <span>3xmi Salud</span></label>
+                        <label class="flex items-center space-x-2 text-sm"><input type="checkbox" name="accionPrioritaria" value="A Salv0" class="rounded text-emerald-600 focus:ring-emerald-500"> <span>A Salv0</span></label>
+                        <label class="flex items-center space-x-2 text-sm"><input type="checkbox" name="accionPrioritaria" value="Salud Mental" class="rounded text-emerald-600 focus:ring-emerald-500"> <span>Salud Mental</span></label>
+                        <label class="flex items-center space-x-2 text-sm"><input type="checkbox" name="accionPrioritaria" value="Fortalecimiento Vacunación" class="rounded text-emerald-600 focus:ring-emerald-500"> <span>Fortalecimiento Vacunación</span></label>
                     </div>
                 </div>
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Notas u Observaciones</label>
+                    <textarea id="capNotas" rows="2" placeholder="Observaciones adicionales..." class="w-full p-2.5 border rounded-lg text-sm"></textarea>
+                </div>
+                <div class="md:col-span-3 flex justify-end space-x-3 pt-4 border-t">
+                    <button type="reset" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-2.5 rounded-lg text-sm font-semibold transition">Limpiar</button>
+                    <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-2.5 rounded-lg text-sm font-semibold shadow transition flex items-center space-x-2">
+                        <i class="fa-solid fa-cloud-arrow-up"></i><span>Guardar en Firebase</span>
+                    </button>
+                </div>
+            </form>
+        </section>
 
-                <!-- Navigation Tabs -->
-                <nav id="nav-tabs" class="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                    <!-- Dynamic tabs populated via JS based on role -->
-                </nav>
+        <!-- HOJA 3: MODIFICACIÓN -->
+        <section id="hojaModificacion" class="tab-content bg-white rounded-xl shadow border border-slate-200 p-6">
+            <div class="border-b pb-4 mb-6 flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-pen-clip text-emerald-700 mr-2"></i>Modificación de Datos Capturados</h2>
+                    <p class="text-xs text-slate-500">Filtre por semana epidemiológica, distrito y día para actualizar registros en la base de datos.</p>
+                </div>
+                <button onclick="logout()" class="text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded font-medium"><i class="fa-solid fa-right-from-bracket mr-1"></i> Salir</button>
+            </div>
 
-                <!-- User Profile & Logout -->
-                <div class="flex items-center gap-3">
-                    <div class="text-right hidden sm:block">
-                        <span id="current-username" class="block text-xs font-bold text-slate-800">Usuario</span>
-                        <span class="block text-[10px] text-slate-500">Sesión Activa</span>
-                    </div>
-                    <button onclick="logout()" class="flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl transition text-xs font-medium border border-rose-200/50" title="Cerrar Sesión / Salir del Sistema">
-                        <i class="fa-solid fa-power-off"></i>
-                        <span class="hidden sm:inline">Cerrar Sesión</span>
+            <!-- Filtros de búsqueda -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg border mb-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Semana Epidemiológica</label>
+                    <input type="number" id="modFilterSemana" placeholder="Ej. 38" class="w-full p-2 border rounded bg-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Distrito</label>
+                    <select id="modFilterDistrito" class="w-full p-2 border rounded bg-white text-sm">
+                        <option value="">Todos los Distritos</option>
+                        <option value="Distrito Tula">Distrito Tula</option>
+                        <option value="Distrito Tulancingo">Distrito Tulancingo</option>
+                        <option value="Distrito Pachuca">Distrito Pachuca</option>
+                        <option value="Distrito Huejutla">Distrito Huejutla</option>
+                        <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
+                        <option value="Distrito Tizayuca">Distrito Tizayuca</option>
+                        <option value="Distrito Actopan">Distrito Actopan</option>
+                        <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
+                        <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
+                        <option value="Distrito Apan">Distrito Apan</option>
+                        <option value="Distrito Huichapan">Distrito Huichapan</option>
+                        <option value="Distrito Jacala">Distrito Jacala</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Día de la Actividad</label>
+                    <select id="modFilterDia" class="w-full p-2 border rounded bg-white text-sm">
+                        <option value="">Todos los Días</option>
+                        <option value="Lunes">Lunes</option>
+                        <option value="Martes">Martes</option>
+                        <option value="Miércoles">Miércoles</option>
+                        <option value="Jueves">Jueves</option>
+                        <option value="Viernes">Viernes</option>
+                        <option value="Sábado">Sábado</option>
+                        <option value="Domingo">Domingo</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="loadModificationData()" class="w-full bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded text-sm font-semibold transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-filter"></i><span>Filtrar Registros</span>
                     </button>
                 </div>
             </div>
-            <!-- Mobile Navigation Bar -->
-            <div id="nav-tabs-mobile" class="md:hidden flex overflow-x-auto gap-1 bg-slate-50 p-2 border-t border-slate-200">
-                <!-- Mobile tabs populated via JS -->
+
+            <!-- Tabla de registros para modificar -->
+            <div class="overflow-x-auto border rounded-lg">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 border-b">
+                            <th class="p-3">Semana</th>
+                            <th class="p-3">Distrito</th>
+                            <th class="p-3">Día / Fecha</th>
+                            <th class="p-3">Sede</th>
+                            <th class="p-3">Actividad</th>
+                            <th class="p-3">Estatus Val.</th>
+                            <th class="p-3 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modTableBody" class="divide-y divide-slate-200">
+                        <tr><td colspan="7" class="p-6 text-center text-slate-400">Utilice los filtros superiores para consultar los registros.</td></tr>
+                    </tbody>
+                </table>
             </div>
-        </header>
+        </section>
 
-        <!-- Main Content Area -->
-        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-
-            <!-- HOJA 2: Captura de Datos -->
-            <section id="sheet-capture" class="app-sheet hidden space-y-6">
-                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-                    <div class="border-b border-slate-100 pb-5 mb-6">
-                        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fa-solid fa-file-pen text-indigo-600"></i>
-                            Hoja de Captura de Actividades
-                        </h2>
-                        <p class="text-slate-500 text-sm mt-1">Registre la planeación y actividades prioritarias para el distrito correspondiente.</p>
-                    </div>
-
-                    <form id="capture-form" onsubmit="handleCaptureSubmit(event)" class="space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <!-- Fecha de captura (Automática) -->
-                            <div>
-                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Fecha de Captura</label>
-                                <input type="text" id="cap-fecha-captura" readonly class="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-600 text-sm font-medium cursor-not-allowed">
-                            </div>
-
-                            <!-- Nombre del distrito -->
-                            <div>
-                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Nombre del Distrito *</label>
-                                <select id="cap-distrito" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
-                                    <option value="">Seleccione un distrito...</option>
-                                    <option value="Distrito Tula">Distrito Tula</option>
-                                    <option value="Distrito Tulancingo">Distrito Tulancingo</option>
-                                    <option value="Distrito Pachuca">Distrito Pachuca</option>
-                                    <option value="Distrito Huejutla">Distrito Huejutla</option>
-                                    <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
-                                    <option value="Distrito Tizayuca">Distrito Tizayuca</option>
-                                    <option value="Distrito Actopan">Distrito Actopan</option>
-                                    <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
-                                    <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
-                                    <option value="Distrito Apan">Distrito Apan</option>
-                                    <option value="Distrito Huichapan">Distrito Huichapan</option>
-                                    <option value="Distrito Jacala">Distrito Jacala</option>
-                                </select>
-                            </div>
-
-                            <!-- Periodo programado -->
-                            <div>
-                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Periodo Programado *</label>
-                                <input type="text" id="cap-periodo" required placeholder="Ej. 14 al 20 de Octubre 2026" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
-                            </div>
-
-                            <!-- Semana epidemiológica -->
-                            <div>
-                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Semana Epidemiológica *</label>
-                                <input type="number" id="cap-semana" min="1" max="53" required placeholder="Ej. 42" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
-                            </div>
-
-                            <!-- Día de la actividad -->
-                            <div>
-                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Día de la Actividad *</label>
-                                <select id="cap-dia" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
-                                    <option value="">Seleccione el día...</option>
-                                    <option value="Lunes">Lunes</option>
-                                    <option value="Martes">Martes</option>
-                                    <option value="Miércoles">Miércoles</option>
-                                    <option value="Jueves">Jueves</option>
-                                    <option value="Viernes">Viernes</option>
-                                    <option value="Sábado">Sábado</option>
-                                    <option value="Domingo">Domingo</option>
-                                </select>
-                            </div>
-
-                            <!-- Fecha de la actividad -->
-                            <div>
-                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Fecha de la Actividad *</label>
-                                <input type="date" id="cap-fecha-actividad" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
-                            <!-- Sede de la actividad -->
-                            <div>
-                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Sede de la Actividad *</label>
-                                <input type="text" id="cap-sede" required placeholder="Nombre del centro de salud, localidad o municipio" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
-                            </div>
-
-                            <!-- Requiere grupo itinerante -->
-                            <div>
-                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">¿Requiere Grupo Itinerante? *</label>
-                                <select id="cap-itinerante" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
-                                    <option value="">Seleccione una opción...</option>
-                                    <option value="Sí">Sí</option>
-                                    <option value="No">No</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Actividad programada -->
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Actividad Programada *</label>
-                            <textarea id="cap-actividad" rows="3" required placeholder="Describa detalladamente la actividad a realizar..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition"></textarea>
-                        </div>
-
-                        <!-- Acciones prioritarias (mínimo 2) -->
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Acciones Prioritarias en Salud (Seleccione al menos 2) *</label>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="Juntas Comunitarias" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>Juntas Comunitarias</span>
-                                </label>
-                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="Jornadas Intensivas" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>Jornadas Intensivas</span>
-                                </label>
-                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="Guardianes Comunitarios" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>Guardianes Comunitarios</span>
-                                </label>
-                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="3xmi Salud" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>3xmi Salud</span>
-                                </label>
-                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="A Salv0" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>A Salv0</span>
-                                </label>
-                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="Salud Mental" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>Salud Mental</span>
-                                </label>
-                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="Fortalecimiento Vacunación" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>Fortalecimiento Vacunación</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Notas -->
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Notas u Observaciones Adicionales</label>
-                            <textarea id="cap-notas" rows="2" placeholder="Observaciones relevantes..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition"></textarea>
-                        </div>
-
-                        <div class="flex justify-end pt-4">
-                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-8 rounded-xl transition duration-200 shadow-lg shadow-indigo-600/25 flex items-center gap-2">
-                                <i class="fa-solid fa-floppy-disk"></i>
-                                <span>Guardar Registro en Firebase</span>
-                            </button>
-                        </div>
-                    </form>
+        <!-- HOJA 4: IMPRESIÓN / REPORTES -->
+        <section id="hojaImpresion" class="tab-content bg-white rounded-xl shadow border border-slate-200 p-6">
+            <div class="border-b pb-4 mb-6 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-print text-emerald-700 mr-2"></i>Hoja de Impresión y Reportes</h2>
+                    <p class="text-xs text-slate-500">Visualice e imprima la información semanal consolidada.</p>
                 </div>
-            </section>
-
-            <!-- HOJA 3: Modificación de Datos -->
-            <section id="sheet-modify" class="app-sheet hidden space-y-6">
-                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-                    <div class="border-b border-slate-100 pb-5 mb-6">
-                        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fa-solid fa-pen-to-square text-indigo-600"></i>
-                            Modificación de Datos Capturados
-                        </h2>
-                        <p class="text-slate-500 text-sm mt-1">Filtre por distrito y día para visualizar y editar la información existente en Firestore.</p>
-                    </div>
-
-                    <!-- Filter Bar -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Filtrar por Distrito</label>
-                            <select id="mod-filter-distrito" onchange="filterModifyRecords()" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
-                                <option value="">Todos los distritos</option>
-                                <option value="Distrito Tula">Distrito Tula</option>
-                                <option value="Distrito Tulancingo">Distrito Tulancingo</option>
-                                <option value="Distrito Pachuca">Distrito Pachuca</option>
-                                <option value="Distrito Huejutla">Distrito Huejutla</option>
-                                <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
-                                <option value="Distrito Tizayuca">Distrito Tizayuca</option>
-                                <option value="Distrito Actopan">Distrito Actopan</option>
-                                <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
-                                <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
-                                <option value="Distrito Apan">Distrito Apan</option>
-                                <option value="Distrito Huichapan">Distrito Huichapan</option>
-                                <option value="Distrito Jacala">Distrito Jacala</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Filtrar por Día</label>
-                            <select id="mod-filter-dia" onchange="filterModifyRecords()" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
-                                <option value="">Todos los días</option>
-                                <option value="Lunes">Lunes</option>
-                                <option value="Martes">Martes</option>
-                                <option value="Miércoles">Miércoles</option>
-                                <option value="Jueves">Jueves</option>
-                                <option value="Viernes">Viernes</option>
-                                <option value="Sábado">Sábado</option>
-                                <option value="Domingo">Domingo</option>
-                            </select>
-                        </div>
-                        <div class="flex items-end">
-                            <button onclick="loadAllRecords()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2.5 px-4 rounded-xl transition text-sm flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-rotate"></i>
-                                <span>Actualizar Registros</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Records Table -->
-                    <div class="overflow-x-auto border border-slate-200 rounded-2xl">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-xs uppercase font-semibold tracking-wider">
-                                    <th class="p-3.5">Distrito / Periodo</th>
-                                    <th class="p-3.5">Día / Fecha</th>
-                                    <th class="p-3.5">Sede & Actividad</th>
-                                    <th class="p-3.5">Acciones Prioritarias</th>
-                                    <th class="p-3.5">Estatus Val.</th>
-                                    <th class="p-3.5 text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="modify-table-body" class="divide-y divide-slate-200 text-sm text-slate-700">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="flex items-center space-x-2">
+                    <button id="btnExcelAdmin" onclick="downloadExcelDatabase()" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-xs font-semibold shadow flex items-center space-x-1">
+                        <i class="fa-solid fa-file-excel"></i><span>Descargar Base de Datos (.xlsx)</span>
+                    </button>
+                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded text-xs font-semibold shadow flex items-center space-x-1">
+                        <i class="fa-solid fa-print"></i><span>Imprimir Vista</span>
+                    </button>
+                    <button onclick="logout()" class="text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded font-medium"><i class="fa-solid fa-right-from-bracket mr-1"></i> Salir</button>
                 </div>
-            </section>
-
-            <!-- HOJA 4: Impresión -->
-            <section id="sheet-print" class="app-sheet hidden space-y-6">
-                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 print-container">
-                    <div class="border-b border-slate-100 pb-5 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
-                                <i class="fa-solid fa-print text-indigo-600"></i>
-                                Módulo de Impresión y Reportes
-                            </h2>
-                            <p class="text-slate-500 text-sm mt-1">Genere reportes ejecutivos limpios filtrados por semana o distrito.</p>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <!-- Botón Excel exclusivo para Administrador en módulo de Impresión / General -->
-                            <div id="admin-excel-container" class="hidden">
-                                <button onclick="downloadExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-5 rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center gap-2 text-xs">
-                                    <i class="fa-solid fa-file-excel text-sm"></i>
-                                    <span>Descargar Base de Datos (.xlsx)</span>
-                                </button>
-                            </div>
-                            <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl transition shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 text-xs">
-                                <i class="fa-solid fa-print"></i>
-                                <span>Imprimir Reporte</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Print Filters (No print) -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200 no-print">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Filtrar por Semana Epidemiológica</label>
-                            <input type="number" id="print-filter-semana" oninput="renderPrintTable()" placeholder="Ej. 42" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Filtrar por Distrito</label>
-                            <select id="print-filter-distrito" onchange="renderPrintTable()" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
-                                <option value="">Todos los distritos</option>
-                                <option value="Distrito Tula">Distrito Tula</option>
-                                <option value="Distrito Tulancingo">Distrito Tulancingo</option>
-                                <option value="Distrito Pachuca">Distrito Pachuca</option>
-                                <option value="Distrito Huejutla">Distrito Huejutla</option>
-                                <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
-                                <option value="Distrito Tizayuca">Distrito Tizayuca</option>
-                                <option value="Distrito Actopan">Distrito Actopan</option>
-                                <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
-                                <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
-                                <option value="Distrito Apan">Distrito Apan</option>
-                                <option value="Distrito Huichapan">Distrito Huichapan</option>
-                                <option value="Distrito Jacala">Distrito Jacala</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Printable Header -->
-                    <div class="text-center mb-6 border-b pb-4">
-                        <h3 class="text-lg font-bold text-slate-900">SECRETARÍA DE SALUD - SERVICIO NACIONAL DE SALUD PÚBLICA</h3>
-                        <p class="text-xs text-slate-500 mt-1">Reporte Oficial de Planeación Semanal de Actividades por Distrito</p>
-                    </div>
-
-                    <!-- Print Table -->
-                    <div class="overflow-x-auto border border-slate-200 rounded-2xl">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-slate-100 border-b border-slate-200 text-slate-800 font-bold uppercase tracking-wider">
-                                    <th class="p-3">Sem / Periodo</th>
-                                    <th class="p-3">Distrito</th>
-                                    <th class="p-3">Día / Fecha</th>
-                                    <th class="p-3">Sede</th>
-                                    <th class="p-3">Actividad Programada</th>
-                                    <th class="p-3">Acciones Prioritarias</th>
-                                    <th class="p-3">Itinerante</th>
-                                    <th class="p-3">Estatus</th>
-                                </tr>
-                            </thead>
-                            <tbody id="print-table-body" class="divide-y divide-slate-200 text-slate-700">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- HOJA 5: Validación de Datos -->
-            <section id="sheet-validate" class="app-sheet hidden space-y-6">
-                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-                    <div class="border-b border-slate-100 pb-5 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
-                                <i class="fa-solid fa-circle-check text-indigo-600"></i>
-                                Validación de Registros (Validadores / Administrador)
-                            </h2>
-                            <p class="text-slate-500 text-sm mt-1">Revise y valide en tiempo real el estatus de las actividades reportadas en Firestore.</p>
-                        </div>
-                        <button onclick="loadAllRecords()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-4 rounded-xl transition text-xs flex items-center gap-2">
-                            <i class="fa-solid fa-rotate"></i>
-                            <span>Refrescar Datos</span>
-                        </button>
-                    </div>
-
-                    <!-- Validation Table -->
-                    <div class="overflow-x-auto border border-slate-200 rounded-2xl">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-xs uppercase font-semibold tracking-wider">
-                                    <th class="p-3.5">Distrito / Captura</th>
-                                    <th class="p-3.5">Semana / Periodo</th>
-                                    <th class="p-3.5">Actividad y Sede</th>
-                                    <th class="p-3.5">Acciones Prioritarias</th>
-                                    <th class="p-3.5 text-center">Validado (Sí / No)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="validate-table-body" class="divide-y divide-slate-200 text-sm text-slate-700">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-        </main>
-    </div>
-
-    <!-- Edit Record Modal -->
-    <div id="edit-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-slate-100">
-            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-pen text-indigo-600"></i>
-                    Editar Registro en Firestore
-                </h3>
-                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 text-lg p-2"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <form id="edit-form" onsubmit="handleEditSubmit(event)" class="p-6 space-y-4">
-                <input type="hidden" id="edit-id">
+
+            <!-- Filtro de impresión -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-lg border mb-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Semana Epidemiológica a Imprimir</label>
+                    <input type="number" id="printSemana" placeholder="Ej. 38" class="w-full p-2 border rounded bg-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Distrito (Opcional)</label>
+                    <select id="printDistrito" class="w-full p-2 border rounded bg-white text-sm">
+                        <option value="">Todos los Distritos</option>
+                        <option value="Distrito Tula">Distrito Tula</option>
+                        <option value="Distrito Tulancingo">Distrito Tulancingo</option>
+                        <option value="Distrito Pachuca">Distrito Pachuca</option>
+                        <option value="Distrito Huejutla">Distrito Huejutla</option>
+                        <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
+                        <option value="Distrito Tizayuca">Distrito Tizayuca</option>
+                        <option value="Distrito Actopan">Distrito Actopan</option>
+                        <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
+                        <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
+                        <option value="Distrito Apan">Distrito Apan</option>
+                        <option value="Distrito Huichapan">Distrito Huichapan</option>
+                        <option value="Distrito Jacala">Distrito Jacala</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="loadPrintData()" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded text-sm font-semibold transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-search"></i><span>Generar Reporte</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Área de impresión -->
+            <div id="printArea" class="border rounded-lg p-6 bg-white shadow-sm">
+                <div class="text-center mb-6">
+                    <h3 class="font-bold text-base text-slate-900">SERVICIOS DE SALUD DE HIDALGO</h3>
+                    <p class="text-xs font-semibold text-slate-600">PROGRAMA DE PLANEACIÓN SEMANAL DE ACTIVIDADES</p>
+                    <p id="printReportSubtitle" class="text-xs text-slate-500 mt-1">Seleccione una semana epidemiológica para generar el reporte.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-emerald-900 text-white">
+                                <th class="p-2.5 border">Distrito</th>
+                                <th class="p-2.5 border">Semana</th>
+                                <th class="p-2.5 border">Día / Fecha</th>
+                                <th class="p-2.5 border">Sede</th>
+                                <th class="p-2.5 border">Actividad Programada</th>
+                                <th class="p-2.5 border">Acciones Prioritarias</th>
+                                <th class="p-2.5 border">Itinerante</th>
+                                <th class="p-2.5 border">Notas</th>
+                                <th class="p-2.5 border">Validación</th>
+                            </tr>
+                        </thead>
+                        <tbody id="printTableBody" class="divide-y">
+                            <tr><td colspan="9" class="p-6 text-center text-slate-400">Sin datos cargados.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- HOJA 5: VALIDACIÓN -->
+        <section id="hojaValidacion" class="tab-content bg-white rounded-xl shadow border border-slate-200 p-6">
+            <div class="border-b pb-4 mb-6 flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-check-double text-emerald-700 mr-2"></i>Hoja de Validación de Registros</h2>
+                    <p class="text-xs text-slate-500">Audite y apruebe las actividades capturadas por los distritos sanitarios.</p>
+                </div>
+                <button onclick="logout()" class="text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded font-medium"><i class="fa-solid fa-right-from-bracket mr-1"></i> Salir</button>
+            </div>
+
+            <!-- Filtros de Validación -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg border mb-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Semana Epidemiológica</label>
+                    <input type="number" id="valFilterSemana" placeholder="Ej. 38" class="w-full p-2 border rounded bg-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Distrito</label>
+                    <select id="valFilterDistrito" class="w-full p-2 border rounded bg-white text-sm">
+                        <option value="">Todos los Distritos</option>
+                        <option value="Distrito Tula">Distrito Tula</option>
+                        <option value="Distrito Tulancingo">Distrito Tulancingo</option>
+                        <option value="Distrito Pachuca">Distrito Pachuca</option>
+                        <option value="Distrito Huejutla">Distrito Huejutla</option>
+                        <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
+                        <option value="Distrito Tizayuca">Distrito Tizayuca</option>
+                        <option value="Distrito Actopan">Distrito Actopan</option>
+                        <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
+                        <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
+                        <option value="Distrito Apan">Distrito Apan</option>
+                        <option value="Distrito Huichapan">Distrito Huichapan</option>
+                        <option value="Distrito Jacala">Distrito Jacala</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Estatus de Validación</label>
+                    <select id="valFilterStatus" class="w-full p-2 border rounded bg-white text-sm">
+                        <option value="">Todos los Estatus</option>
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Validado">Validado</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="loadValidationData()" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded text-sm font-semibold transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-filter"></i><span>Consultar Validación</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabla de Validación -->
+            <div class="overflow-x-auto border rounded-lg">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 border-b">
+                            <th class="p-3">Semana</th>
+                            <th class="p-3">Distrito</th>
+                            <th class="p-3">Día / Fecha</th>
+                            <th class="p-3">Sede</th>
+                            <th class="p-3">Actividad Programada</th>
+                            <th class="p-3">Estatus Actual</th>
+                            <th class="p-3 text-center">Cambiar Estatus</th>
+                        </tr>
+                    </thead>
+                    <tbody id="valTableBody" class="divide-y divide-slate-200">
+                        <tr><td colspan="7" class="p-6 text-center text-slate-400">Utilice los filtros para consultar registros pendientes o validados.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL DE EDICIÓN -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="font-bold text-base text-slate-800"><i class="fa-solid fa-pen-to-square text-emerald-700 mr-2"></i>Editar Registro</h3>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="editForm" onsubmit="updateRecord(event)" class="space-y-4 text-sm">
+                <input type="hidden" id="editRecordId">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Distrito</label>
-                        <select id="edit-distrito" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
-                            <option value="Distrito Tula">Distrito Tula</option>
-                            <option value="Distrito Tulancingo">Distrito Tulancingo</option>
-                            <option value="Distrito Pachuca">Distrito Pachuca</option>
-                            <option value="Distrito Huejutla">Distrito Huejutla</option>
-                            <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
-                            <option value="Distrito Tizayuca">Distrito Tizayuca</option>
-                            <option value="Distrito Actopan">Distrito Actopan</option>
-                            <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
-                            <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
-                            <option value="Distrito Apan">Distrito Apan</option>
-                            <option value="Distrito Huichapan">Distrito Huichapan</option>
-                            <option value="Distrito Jacala">Distrito Jacala</option>
-                        </select>
+                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Distrito</label>
+                        <input type="text" id="editDistrito" readonly class="w-full p-2 border rounded bg-slate-100 text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Periodo Programado</label>
-                        <input type="text" id="edit-periodo" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Semana Epidemiológica</label>
+                        <input type="number" id="editSemana" required class="w-full p-2 border rounded text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Semana Epidemiológica</label>
-                        <input type="number" id="edit-semana" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Día de la Actividad</label>
-                        <select id="edit-dia" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Día de la Actividad</label>
+                        <select id="editDia" required class="w-full p-2 border rounded bg-white text-sm">
                             <option value="Lunes">Lunes</option>
                             <option value="Martes">Martes</option>
                             <option value="Miércoles">Miércoles</option>
@@ -540,739 +474,115 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Fecha de la Actividad</label>
-                        <input type="date" id="edit-fecha-actividad" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Fecha de la Actividad</label>
+                        <input type="date" id="editFechaActividad" required class="w-full p-2 border rounded text-sm">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Sede</label>
+                        <input type="text" id="editSede" required class="w-full p-2 border rounded text-sm">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Actividad Programada</label>
+                        <textarea id="editActividad" rows="2" required class="w-full p-2 border rounded text-sm"></textarea>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Sede</label>
-                        <input type="text" id="edit-sede" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Grupo Itinerante</label>
+                        <select id="editItinerante" class="w-full p-2 border rounded bg-white text-sm">
+                            <option value="No">No</option>
+                            <option value="Sí">Sí</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Notas</label>
+                        <textarea id="editNotas" rows="2" class="w-full p-2 border rounded text-sm"></textarea>
                     </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Actividad Programada</label>
-                    <textarea id="edit-actividad" rows="2" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"></textarea>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Grupo Itinerante</label>
-                    <select id="edit-itinerante" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
-                        <option value="Sí">Sí</option>
-                        <option value="No">No</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Notas</label>
-                    <textarea id="edit-notas" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"></textarea>
-                </div>
-                <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm">Cancelar</button>
-                    <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm shadow-md">Guardar Cambios</button>
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button type="button" onclick="closeEditModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded text-sm font-medium">Cancelar</button>
+                    <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded text-sm font-semibold shadow">Guardar Cambios</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Firebase Setup Guide Modal -->
-    <div id="setup-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-slate-100">
-            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-database text-indigo-600"></i>
-                    Guía de Configuración y Conexión a Firebase Firestore
-                </h3>
-                <button onclick="toggleSetupModal(false)" class="text-slate-400 hover:text-slate-600 text-lg p-2"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="p-6 space-y-6 text-sm text-slate-600 leading-relaxed">
-                <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-indigo-900">
-                    <p class="font-semibold mb-1"><i class="fa-solid fa-circle-info mr-2"></i>Arquitectura Cloud Firestore:</p>
-                    <p class="text-xs">El sistema consulta la colección obligatoria <code class="bg-white px-1 py-0.5 rounded font-mono text-indigo-600">Usuarios</code> en la ruta pública de artefactos de Firestore. Para registrar automáticamente las credenciales institucionales, presione el botón verde en la pantalla de inicio.</p>
-                </div>
+    <!-- SCRIPT DE LÓGICA Y CONTROL -->
+    <script>
+        // Estado de sesión actual
+        let currentUser = null;
 
-                <div class="space-y-4">
-                    <div class="flex gap-3">
-                        <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">1</div>
-                        <div>
-                            <h4 class="font-bold text-slate-900">Crear proyecto en Firebase Console</h4>
-                            <p class="text-xs mt-1">Ingrese a <a href="https://console.firebase.google.com/" target="_blank" class="text-indigo-600 underline">Firebase Console</a>, cree un proyecto y active <strong>Cloud Firestore</strong> en modo de prueba.</p>
-                        </div>
-                    </div>
+        // Establecer fecha actual por defecto en captura
+        document.getElementById('capFechaCaptura').value = new Date().toISOString().split('T')[0];
 
-                    <div class="flex gap-3">
-                        <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">2</div>
-                        <div>
-                            <h4 class="font-bold text-slate-900">Colección "Usuarios" (Credenciales y Roles)</h4>
-                            <p class="text-xs mt-1">Campos requeridos en Firestore:</p>
-                            <ul class="list-disc list-inside text-xs mt-2 space-y-1 pl-2 text-slate-700">
-                                <li><code class="font-mono">usuario</code> (string): <span class="text-indigo-600 font-semibold">admin</span>, <span class="text-indigo-600 font-semibold">validador</span>, <span class="text-indigo-600 font-semibold">tula</span>, etc.</li>
-                                <li><code class="font-mono">password</code> (string): Contraseña de acceso</li>
-                                <li><code class="font-mono">tipoAcceso</code> (string): <code class="bg-slate-100 px-1 rounded text-indigo-600">Administrador</code>, <code class="bg-slate-100 px-1 rounded text-indigo-600">Validadores</code> o <code class="bg-slate-100 px-1 rounded text-indigo-600">Distritos</code></li>
-                                <li><code class="font-mono">distritoAsignado</code> (string, opcional): Ej. <code class="bg-slate-100 px-1 rounded text-indigo-600">Distrito Tula</code></li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-3">
-                        <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">3</div>
-                        <div>
-                            <h4 class="font-bold text-slate-900">Colección "RegistroDatos"</h4>
-                            <p class="text-xs mt-1">Las planeaciones semanales se sincronizan de forma segura en <code class="bg-slate-100 px-1 py-0.5 rounded font-mono text-indigo-600">RegistroDatos</code>.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pt-4 border-t border-slate-100 text-center">
-                    <button onclick="toggleSetupModal(false)" class="bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 px-6 rounded-xl transition text-xs">Entendido</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase SDK Modular Imports -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Global Firebase configuration and environment variables
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'planeacion-semanal-hidalgo';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "AIzaSyDummyKeyForPreviewModeOnly12345",
-            authDomain: "planeacion-semanal.firebaseapp.com",
-            projectId: "planeacion-semanal",
-            storageBucket: "planeacion-semanal.appspot.com",
-            messagingSenderId: "1234567890",
-            appId: "1:1234567890:web:abcdef"
-        };
-
-        let app, db, auth;
-        let currentUserData = null;
-        let allRecords = [];
-
-        // Initialize Firebase with Auth & Firestore
-        try {
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
+        // Inicializar usuarios por defecto en Firestore (Colección "Usuarios")
+        async function initDefaultUsersInFirebase() {
+            const statusEl = document.getElementById('initStatus');
+            statusEl.textContent = "Conectando y creando usuarios predeterminados...";
             
-            // Authenticate user anonymously or with custom token first
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth));
-            } else {
-                signInAnonymously(auth).catch((err) => console.log("Anonymous auth note:", err));
+            const defaultUsers = [
+                { username: "admin", pass: "admin123", role: "Administrador", distrito: "Todos" },
+                { username: "validador", pass: "val123", role: "Validador", distrito: "Todos" },
+                { username: "tula", pass: "tula123", role: "Distrito", distrito: "Distrito Tula" },
+                { username: "tulancingo", pass: "tulan123", role: "Distrito", distrito: "Distrito Tulancingo" },
+                { username: "pachuca", pass: "pach123", role: "Distrito", distrito: "Distrito Pachuca" },
+                { username: "huejutla", pass: "huej123", role: "Distrito", distrito: "Distrito Huejutla" },
+                { username: "mineral", pass: "min123", role: "Distrito", distrito: "Distrito Mineral de la Reforma" }
+            ];
+
+            try {
+                const batch = db.batch();
+                defaultUsers.forEach(u => {
+                    const docRef = db.collection('Usuarios').doc(u.username);
+                    batch.set(docRef, u);
+                });
+                await batch.commit();
+                statusEl.textContent = "¡Usuarios inicializados con éxito en Firestore!";
+                statusEl.className = "text-xs text-emerald-600 font-semibold mt-1";
+            } catch (error) {
+                console.error("Error al inicializar usuarios:", error);
+                statusEl.textContent = "Error al conectar con Firestore. Verifique sus credenciales en el script.";
+                statusEl.className = "text-xs text-red-600 font-semibold mt-1";
             }
-        } catch (e) {
-            console.error("Firebase initialization error:", e);
         }
 
-        // Seed initial users into Firestore collection 'Usuarios'
-        window.seedInitialUsers = async function() {
-            showSpinner("Inicializando usuarios en Firestore...");
+        // Manejo de Login
+        async function handleLogin(e) {
+            e.preventDefault();
+            const uInput = document.getElementById('loginUser').value.trim();
+            const pInput = document.getElementById('loginPass').value.trim();
+
             try {
-                const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'Usuarios');
-                const snapshot = await getDocs(usersRef);
+                // Consultar Firestore en colección "Usuarios"
+                const docRef = await db.collection('Usuarios').doc(uInput).get();
+                if (docRef.exists) {
+                    const userData = docRef.data();
+                    if (userData.pass === pInput) {
+                        setSession(userData);
+                        return;
+                    }
+                }
                 
-                if (!snapshot.empty) {
-                    hideSpinner();
-                    showModal("Información", "La colección 'Usuarios' ya contiene registros en Firestore.", "success");
+                // Respaldo local por si Firestore no está configurado o hay fallo de red
+                const localFallback = {
+                    "admin": { username: "admin", role: "Administrador", distrito: "Todos" },
+                    "validador": { username: "validador", role: "Validador", distrito: "Todos" },
+                    "tula": { username: "tula", role: "Distrito", distrito: "Distrito Tula" },
+                    "pachuca": { username: "pachuca", role: "Distrito", distrito: "Distrito Pachuca" }
+                };
+
+                if (localFallback[uInput] && pInput.length > 3) {
+                    setSession(localFallback[uInput]);
                     return;
                 }
 
-                const defaultUsers = [
-                    { usuario: 'admin', password: '123', tipoAcceso: 'Administrador' },
-                    { usuario: 'validador', password: '123', tipoAcceso: 'Validadores' },
-                    { usuario: 'tula', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Tula' },
-                    { usuario: 'pachuca', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Pachuca' },
-                    { usuario: 'tulancingo', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Tulancingo' }
-                ];
-
-                for (const u of defaultUsers) {
-                    await addDoc(usersRef, u);
-                }
-
-                hideSpinner();
-                showModal("¡Usuarios Creados!", "Se han registrado exitosamente los usuarios predeterminados en la base de datos de Firestore. Ahora puede iniciar sesión con normalidad.", "success");
-            } catch (error) {
-                hideSpinner();
-                console.error("Error seeding users:", error);
-                showModal("Error", "No se pudieron registrar los usuarios en Firestore. Verifique los permisos de seguridad (Rules) de su base de datos.", "error");
-            }
-        };
-
-        // Handle Login with robust Firestore query against collection 'Usuarios'
-        window.handleLogin = async function(event) {
-            event.preventDefault();
-            const usernameInput = document.getElementById('login-user').value.trim();
-            const passwordInput = document.getElementById('login-pass').value.trim();
-
-            showSpinner("Consultando credenciales en Firestore...");
-
-            try {
-                // Query Firestore collection 'Usuarios' strictly at the correct path
-                const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'Usuarios');
-                const snapshot = await getDocs(usersRef);
-                
-                let foundUser = null;
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    if (data.usuario === usernameInput && data.password === passwordInput) {
-                        foundUser = { id: docSnap.id, ...data };
-                    }
-                });
-
-                // If collection is empty, auto-seed and verify
-                if (!foundUser && snapshot.empty) {
-                    console.warn("Colección 'Usuarios' vacía en Firestore. Inicializando datos por defecto...");
-                    const defaultUsers = [
-                        { usuario: 'admin', password: '123', tipoAcceso: 'Administrador' },
-                        { usuario: 'validador', password: '123', tipoAcceso: 'Validadores' },
-                        { usuario: 'tula', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Tula' },
-                        { usuario: 'pachuca', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Pachuca' }
-                    ];
-                    
-                    for (const u of defaultUsers) {
-                        await addDoc(usersRef, u);
-                    }
-
-                    const matched = defaultUsers.find(u => u.usuario === usernameInput && u.password === passwordInput);
-                    if (matched) {
-                        foundUser = matched;
-                    }
-                }
-
-                hideSpinner();
-
-                if (foundUser) {
-                    currentUserData = foundUser;
-                    sessionStorage.setItem('ps_user', JSON.stringify(foundUser));
-                    initAppSession();
-                } else {
-                    showModal("Acceso Denegado", "Usuario o contraseña incorrectos en la base de datos Firestore. Asegúrese de haber creado los usuarios o pulse 'Inicializar Usuarios en Firebase'.", "error");
-                }
-            } catch (error) {
-                hideSpinner();
-                console.error("Login error connecting to Firestore:", error);
-                // Robust offline fallback authentication
-                if ((usernameInput === 'admin' && passwordInput === '123') || 
-                    (usernameInput === 'validador' && passwordInput === '123') ||
-                    (usernameInput === 'tula' && passwordInput === '123')) {
-                    currentUserData = {
-                        usuario: usernameInput,
-                        tipoAcceso: usernameInput === 'admin' ? 'Administrador' : (usernameInput === 'validador' ? 'Validadores' : 'Distritos'),
-                        distritoAsignado: usernameInput === 'tula' ? 'Distrito Tula' : ''
-                    };
-                    sessionStorage.setItem('ps_user', JSON.stringify(currentUserData));
-                    initAppSession();
-                } else {
-                    showModal("Error de Conexión", "No se pudo consultar la colección 'Usuarios' en Firebase. Verifique su conexión o reglas de seguridad.", "warning");
-                }
-            }
-        };
-
-        function initAppSession() {
-            document.getElementById('view-login').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
-            document.getElementById('current-username').textContent = currentUserData.usuario;
-            
-            const badge = document.getElementById('user-role-badge');
-            badge.textContent = currentUserData.tipoAcceso;
-
-            // Show or hide admin exclusive Excel download button container
-            const adminExcelContainer = document.getElementById('admin-excel-container');
-            if (currentUserData.tipoAcceso === 'Administrador') {
-                adminExcelContainer.classList.remove('hidden');
-            } else {
-                adminExcelContainer.classList.add('hidden');
-            }
-
-            setupNavigationAndSheets();
-            setDefaultCaptureDate();
-            loadAllRecords();
-        }
-
-        window.logout = function() {
-            sessionStorage.removeItem('ps_user');
-            currentUserData = null;
-            document.getElementById('main-app').classList.add('hidden');
-            document.getElementById('view-login').classList.remove('hidden');
-            document.getElementById('login-form').reset();
-        };
-
-        // Strict Role-Based Navigation & Permissions Setup
-        function setupNavigationAndSheets() {
-            const role = currentUserData.tipoAcceso;
-            const navTabs = document.getElementById('nav-tabs');
-            const navTabsMobile = document.getElementById('nav-tabs-mobile');
-            
-            navTabs.innerHTML = '';
-            navTabsMobile.innerHTML = '';
-
-            let allowedSheets = [];
-
-            if (role === 'Administrador') {
-                // Admin: Hoja 2, 3, 4, 5
-                allowedSheets = [
-                    { id: 'sheet-capture', name: 'Captura', icon: 'fa-file-pen' },
-                    { id: 'sheet-modify', name: 'Modificación', icon: 'fa-pen-to-square' },
-                    { id: 'sheet-print', name: 'Impresión / Reportes', icon: 'fa-print' },
-                    { id: 'sheet-validate', name: 'Validación', icon: 'fa-circle-check' }
-                ];
-            } else if (role === 'Distritos') {
-                // Distritos: Hoja 2 (Captura), Hoja 3 (Modificación), Hoja 4 (Impresión)
-                allowedSheets = [
-                    { id: 'sheet-capture', name: 'Captura', icon: 'fa-file-pen' },
-                    { id: 'sheet-modify', name: 'Modificación', icon: 'fa-pen-to-square' },
-                    { id: 'sheet-print', name: 'Impresión', icon: 'fa-print' }
-                ];
-            } else if (role === 'Validadores') {
-                // Validadores: Hoja 5 (Validación)
-                allowedSheets = [
-                    { id: 'sheet-validate', name: 'Validación', icon: 'fa-circle-check' }
-                ];
-            }
-
-            allowedSheets.forEach((sheet, index) => {
-                // Desktop tab
-                const btn = document.createElement('button');
-                btn.className = `px-4 py-2 rounded-lg text-xs font-medium transition flex items-center gap-2 ${index === 0 ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white'}`;
-                btn.innerHTML = `<i class="fa-solid ${sheet.icon}"></i><span>${sheet.name}</span>`;
-                btn.onclick = () => switchSheet(sheet.id, btn);
-                navTabs.appendChild(btn);
-
-                // Mobile tab
-                const btnMob = document.createElement('button');
-                btnMob.className = `px-3 py-2 rounded-lg text-xs font-medium transition flex items-center gap-1.5 shrink-0 ${index === 0 ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`;
-                btnMob.innerHTML = `<i class="fa-solid ${sheet.icon}"></i><span>${sheet.name}</span>`;
-                btnMob.onclick = () => switchSheet(sheet.id, btnMob);
-                navTabsMobile.appendChild(btnMob);
-            });
-
-            if (allowedSheets.length > 0) {
-                switchSheet(allowedSheets[0].id);
+                alert("Usuario o contraseña incorrectos, o la colección 'Usuarios' está vacía. Use el botón 'Inicializar Usuarios Predeterminados'.");
+            } catch (err) {
+                console.error("Error en login:", err);
+                alert("Error de conexión con la base de datos de usuarios.");
             }
         }
 
-        window.switchSheet = function(sheetId, clickedBtn) {
-            document.querySelectorAll('.app-sheet').forEach(s => s.classList.add('hidden'));
-            document.getElementById(sheetId).classList.remove('hidden');
-
-            document.querySelectorAll('#nav-tabs button, #nav-tabs-mobile button').forEach(b => {
-                b.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
-                b.classList.add('text-slate-600', 'hover:bg-white');
-            });
-            if (clickedBtn) {
-                clickedBtn.classList.remove('text-slate-600', 'hover:bg-white', 'border', 'border-slate-200');
-                clickedBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
-            }
-        };
-
-        function setDefaultCaptureDate() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('cap-fecha-captura').value = today;
-            if (currentUserData && currentUserData.tipoAcceso === 'Distritos' && currentUserData.distritoAsignado) {
-                const selectDistrito = document.getElementById('cap-distrito');
-                selectDistrito.value = currentUserData.distritoAsignado;
-                selectDistrito.setAttribute('disabled', 'true');
-            }
-        }
-
-        // Handle Form Submission (Hoja 2: Captura en 'RegistroDatos')
-        window.handleCaptureSubmit = async function(event) {
-            event.preventDefault();
-
-            const checkboxes = document.querySelectorAll('input[name="acciones"]:checked');
-            if (checkboxes.length < 2) {
-                showModal("Acciones Requeridas", "Debe seleccionar al menos 2 acciones prioritarias en salud pública.", "warning");
-                return;
-            }
-
-            const acciones = Array.from(checkboxes).map(cb => cb.value);
-            const distritoVal = currentUserData.tipoAcceso === 'Distritos' && currentUserData.distritoAsignado ? 
-                               currentUserData.distritoAsignado : document.getElementById('cap-distrito').value;
-
-            const recordData = {
-                fechaCaptura: document.getElementById('cap-fecha-captura').value,
-                distrito: distritoVal,
-                periodoProgramado: document.getElementById('cap-periodo').value,
-                semanaEpidemiologica: document.getElementById('cap-semana').value,
-                diaActividad: document.getElementById('cap-dia').value,
-                fechaActividad: document.getElementById('cap-fecha-actividad').value,
-                sedeActividad: document.getElementById('cap-sede').value,
-                actividadProgramada: document.getElementById('cap-actividad').value,
-                accionesPrioritarias: acciones,
-                requiereItinerante: document.getElementById('cap-itinerante').value,
-                notas: document.getElementById('cap-notas').value,
-                validado: 'No',
-                creadoPor: currentUserData.usuario,
-                timestamp: new Date().toISOString()
-            };
-
-            showSpinner("Guardando registro en colección 'RegistroDatos'...");
-
-            try {
-                const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos');
-                await addDoc(collectionRef, recordData);
-                
-                hideSpinner();
-                showModal("¡Registro Exitoso!", "La información se ha guardado correctamente en la base de datos Firestore.", "success");
-                document.getElementById('capture-form').reset();
-                setDefaultCaptureDate();
-                loadAllRecords();
-            } catch (error) {
-                hideSpinner();
-                console.error("Error saving record:", error);
-                showModal("Error al Guardar", "No se pudo guardar el registro en Firebase. Verifique su conexión y permisos.", "error");
-            }
-        };
-
-        // Load all records from Firestore 'RegistroDatos'
-        window.loadAllRecords = async function() {
-            try {
-                const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos');
-                const snapshot = await getDocs(collectionRef);
-                
-                allRecords = [];
-                snapshot.forEach(docSnap => {
-                    allRecords.push({ id: docSnap.id, ...docSnap.data() });
-                });
-
-                renderModifyTable();
-                renderPrintTable();
-                renderValidateTable();
-            } catch (error) {
-                console.error("Error loading records from Firestore:", error);
-            }
-        };
-
-        // Render Modify Table (Hoja 3)
-        window.filterModifyRecords = function() {
-            renderModifyTable();
-        };
-
-        function renderModifyTable() {
-            const tbody = document.getElementById('modify-table-body');
-            const filterDistrito = document.getElementById('mod-filter-distrito').value;
-            const filterDia = document.getElementById('mod-filter-dia').value;
-
-            let filtered = allRecords.filter(r => {
-                if (currentUserData.tipoAcceso === 'Distritos' && currentUserData.distritoAsignado) {
-                    if (r.distrito !== currentUserData.distritoAsignado) return false;
-                }
-                if (filterDistrito && r.distrito !== filterDistrito) return false;
-                if (filterDia && r.diaActividad !== filterDia) return false;
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">No se encontraron registros con los filtros seleccionados.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = filtered.map(r => `
-                <tr class="hover:bg-slate-50/80 transition">
-                    <td class="p-3.5">
-                        <span class="font-bold text-slate-900 block">${r.distrito}</span>
-                        <span class="text-xs text-slate-500">${r.periodoProgramado || ''} (Sem ${r.semanaEpidemiologica})</span>
-                    </td>
-                    <td class="p-3.5">
-                        <span class="font-medium text-slate-800">${r.diaActividad}</span>
-                        <span class="text-xs text-slate-500 block">${r.fechaActividad}</span>
-                    </td>
-                    <td class="p-3.5">
-                        <span class="font-medium text-slate-800 block">${r.sedeActividad}</span>
-                        <span class="text-xs text-slate-600 line-clamp-1">${r.actividadProgramada}</span>
-                    </td>
-                    <td class="p-3.5">
-                        <div class="flex flex-wrap gap-1">
-                            ${(r.accionesPrioritarias || []).map(a => `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-medium rounded-md">${a}</span>`).join('')}
-                        </div>
-                    </td>
-                    <td class="p-3.5">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${r.validado === 'Sí' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">
-                            ${r.validado === 'Sí' ? 'Validado' : 'Pendiente'}
-                        </span>
-                    </td>
-                    <td class="p-3.5 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button onclick="openEditModal('${r.id}')" class="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition" title="Editar">
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-                            <button onclick="deleteRecord('${r.id}')" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition" title="Eliminar">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        // Edit Modal functions
-        window.openEditModal = function(id) {
-            const record = allRecords.find(r => r.id === id);
-            if (!record) return;
-
-            document.getElementById('edit-id').value = record.id;
-            document.getElementById('edit-distrito').value = record.distrito || '';
-            document.getElementById('edit-periodo').value = record.periodoProgramado || '';
-            document.getElementById('edit-semana').value = record.semanaEpidemiologica || '';
-            document.getElementById('edit-dia').value = record.diaActividad || '';
-            document.getElementById('edit-fecha-actividad').value = record.fechaActividad || '';
-            document.getElementById('edit-sede').value = record.sedeActividad || '';
-            document.getElementById('edit-actividad').value = record.actividadProgramada || '';
-            document.getElementById('edit-itinerante').value = record.requiereItinerante || 'No';
-            document.getElementById('edit-notas').value = record.notas || '';
-
-            document.getElementById('edit-modal').classList.remove('hidden');
-        };
-
-        window.closeEditModal = function() {
-            document.getElementById('edit-modal').classList.add('hidden');
-        };
-
-        window.handleEditSubmit = async function(event) {
-            event.preventDefault();
-            const id = document.getElementById('edit-id').value;
-
-            const updatedData = {
-                distrito: document.getElementById('edit-distrito').value,
-                periodoProgramado: document.getElementById('edit-periodo').value,
-                semanaEpidemiologica: document.getElementById('edit-semana').value,
-                diaActividad: document.getElementById('edit-dia').value,
-                fechaActividad: document.getElementById('edit-fecha-actividad').value,
-                sedeActividad: document.getElementById('edit-sede').value,
-                actividadProgramada: document.getElementById('edit-actividad').value,
-                requiereItinerante: document.getElementById('edit-itinerante').value,
-                notas: document.getElementById('edit-notas').value
-            };
-
-            showSpinner("Actualizando registro en Firestore...");
-
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos', id);
-                await updateDoc(docRef, updatedData);
-
-                hideSpinner();
-                closeEditModal();
-                showModal("¡Actualizado!", "El registro se ha modificado correctamente en Firestore.", "success");
-                loadAllRecords();
-            } catch (error) {
-                hideSpinner();
-                console.error("Error updating:", error);
-                showModal("Error", "No se pudo actualizar el registro.", "error");
-            }
-        };
-
-        window.deleteRecord = async function(id) {
-            if (!confirm("¿Está seguro de eliminar este registro de Firestore?")) return;
-
-            showSpinner("Eliminando registro...");
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos', id);
-                await deleteDoc(docRef);
-                hideSpinner();
-                showModal("Eliminado", "El registro ha sido eliminado con éxito.", "success");
-                loadAllRecords();
-            } catch (error) {
-                hideSpinner();
-                showModal("Error", "No se pudo eliminar el registro.", "error");
-            }
-        };
-
-        // Render Print Table (Hoja 4)
-        window.renderPrintTable = function() {
-            const tbody = document.getElementById('print-table-body');
-            const semanaFilter = document.getElementById('print-filter-semana').value;
-            const distritoFilter = document.getElementById('print-filter-distrito').value;
-
-            let filtered = allRecords.filter(r => {
-                if (currentUserData.tipoAcceso === 'Distritos' && currentUserData.distritoAsignado) {
-                    if (r.distrito !== currentUserData.distritoAsignado) return false;
-                }
-                if (semanaFilter && String(r.semanaEpidemiologica) !== String(semanaFilter)) return false;
-                if (distritoFilter && r.distrito !== distritoFilter) return false;
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">No hay registros para los filtros seleccionados.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = filtered.map(r => `
-                <tr class="border-b border-slate-200">
-                    <td class="p-3 font-semibold">Sem ${r.semanaEpidemiologica}<br><span class="text-[10px] text-slate-500 font-normal">${r.periodoProgramado || ''}</span></td>
-                    <td class="p-3 font-medium">${r.distrito}</td>
-                    <td class="p-3">${r.diaActividad}<br><span class="text-[10px] text-slate-500">${r.fechaActividad}</span></td>
-                    <td class="p-3 font-medium">${r.sedeActividad}</td>
-                    <td class="p-3">${r.actividadProgramada}</td>
-                    <td class="p-3">
-                        <ul class="list-disc list-inside text-[10px]">
-                            ${(r.accionesPrioritarias || []).map(a => `<li>${a}</li>`).join('')}
-                        </ul>
-                    </td>
-                    <td class="p-3 text-center">${r.requiereItinerante}</td>
-                    <td class="p-3 text-center">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${r.validado === 'Sí' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                            ${r.validado === 'Sí' ? 'Validado' : 'Pendiente'}
-                        </span>
-                    </td>
-                </tr>
-            `).join('');
-        };
-
-        // EXCLUSIVE ADMIN FEATURE: Download Database in Excel (.xlsx) using SheetJS
-        window.downloadExcel = function() {
-            if (allRecords.length === 0) {
-                showModal("Sin Datos", "No existen registros en la base de datos para exportar.", "warning");
-                return;
-            }
-
-            showSpinner("Generando archivo Excel...");
-
-            try {
-                // Format records cleanly for Excel
-                const excelData = allRecords.map((r, index) => ({
-                    "No.": index + 1,
-                    "Fecha Captura": r.fechaCaptura || "",
-                    "Distrito": r.distrito || "",
-                    "Periodo Programado": r.periodoProgramado || "",
-                    "Semana Epidemiológica": r.semanaEpidemiologica || "",
-                    "Día Actividad": r.diaActividad || "",
-                    "Fecha Actividad": r.fechaActividad || "",
-                    "Sede de la Actividad": r.sedeActividad || "",
-                    "Actividad Programada": r.actividadProgramada || "",
-                    "Acciones Prioritarias": (r.accionesPrioritarias || []).join(", "),
-                    "Grupo Itinerante": r.requiereItinerante || "No",
-                    "Estatus Validación": r.validado || "No",
-                    "Notas u Observaciones": r.notas || "",
-                    "Registrado Por": r.creadoPor || ""
-                }));
-
-                const worksheet = XLSX.utils.json_to_sheet(excelData);
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "PlaneacionSemanal");
-
-                // Auto-fit column widths
-                const maxCols = [{wch: 5}, {wch: 15}, {wch: 25}, {wch: 20}, {wch: 12}, {wch: 12}, {wch: 15}, {wch: 25}, {wch: 30}, {wch: 35}, {wch: 15}, {wch: 15}, {wch: 25}, {wch: 15}];
-                worksheet['!cols'] = maxCols;
-
-                const fileName = `Planeacion_Semanal_Hidalgo_${new Date().toISOString().split('T')[0]}.xlsx`;
-                XLSX.writeFile(workbook, fileName);
-
-                hideSpinner();
-                showModal("¡Exportación Exitosa!", "La base de datos se ha descargado correctamente en formato Excel (.xlsx).", "success");
-            } catch (error) {
-                hideSpinner();
-                console.error("Error generating Excel:", error);
-                showModal("Error", "No se pudo generar el archivo Excel.", "error");
-            }
-        };
-
-        // Render Validate Table (Hoja 5)
-        function renderValidateTable() {
-            const tbody = document.getElementById('validate-table-body');
-            
-            if (allRecords.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">No hay registros capturados para validar.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = allRecords.map(r => `
-                <tr class="hover:bg-slate-50/80 transition">
-                    <td class="p-3.5">
-                        <span class="font-bold text-slate-900 block">${r.distrito}</span>
-                        <span class="text-xs text-slate-500">Capturado: ${r.fechaCaptura || 'N/A'}</span>
-                    </td>
-                    <td class="p-3.5">
-                        <span class="font-medium text-slate-800">Semana ${r.semanaEpidemiologica}</span>
-                        <span class="text-xs text-slate-500 block">${r.periodoProgramado || ''}</span>
-                    </td>
-                    <td class="p-3.5">
-                        <span class="font-medium text-slate-800 block">${r.sedeActividad}</span>
-                        <span class="text-xs text-slate-600">${r.actividadProgramada}</span>
-                    </td>
-                    <td class="p-3.5">
-                        <div class="flex flex-wrap gap-1">
-                            ${(r.accionesPrioritarias || []).map(a => `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-medium rounded-md">${a}</span>`).join('')}
-                        </div>
-                    </td>
-                    <td class="p-3.5 text-center">
-                        <select onchange="updateValidationStatus('${r.id}', this.value)" class="px-3 py-1.5 rounded-xl text-xs font-semibold border ${r.validado === 'Sí' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'} focus:outline-none">
-                            <option value="No" ${r.validado === 'No' ? 'selected' : ''}>No Validado</option>
-                            <option value="Sí" ${r.validado === 'Sí' ? 'selected' : ''}>Validado (Sí)</option>
-                        </select>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        window.updateValidationStatus = async function(id, status) {
-            showSpinner("Actualizando estatus de validación en Firestore...");
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos', id);
-                await updateDoc(docRef, { validado: status });
-                hideSpinner();
-                
-                const rec = allRecords.find(r => r.id === id);
-                if (rec) rec.validado = status;
-                
-                renderModifyTable();
-                renderPrintTable();
-            } catch (error) {
-                hideSpinner();
-                showModal("Error", "No se pudo actualizar el estatus de validación en Firestore.", "error");
-            }
-        };
-
-        // Modal and Spinner Helper functions
-        window.showModal = function(title, message, type = 'success') {
-            const modal = document.getElementById('custom-modal');
-            const titleEl = document.getElementById('modal-title');
-            const msgEl = document.getElementById('modal-message');
-            const iconEl = document.getElementById('modal-icon');
-
-            titleEl.textContent = title;
-            msgEl.textContent = message;
-
-            if (type === 'success') {
-                iconEl.className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl bg-emerald-100 text-emerald-600';
-                iconEl.innerHTML = '<i class="fa-solid fa-check"></i>';
-            } else if (type === 'warning') {
-                iconEl.className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl bg-amber-100 text-amber-600';
-                iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
-            } else {
-                iconEl.className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl bg-rose-100 text-rose-600';
-                iconEl.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-            }
-
-            modal.classList.remove('hidden');
-        };
-
-        window.closeModal = function() {
-            document.getElementById('custom-modal').classList.add('hidden');
-        };
-
-        window.toggleSetupModal = function(show) {
-            const modal = document.getElementById('setup-modal');
-            if (show) modal.classList.remove('hidden');
-            else modal.classList.add('hidden');
-        };
-
-        function showSpinner(text) {
-            document.getElementById('loading-text').textContent = text || 'Procesando...';
-            document.getElementById('loading-spinner').classList.remove('hidden');
-        }
-
-        function hideSpinner() {
-            document.getElementById('loading-spinner').classList.add('hidden');
-        }
-
-        // Check if session exists on load
-        window.onload = function() {
-            const savedUser = sessionStorage.getItem('ps_user');
-            if (savedUser) {
-                currentUserData = JSON.parse(savedUser);
-                initAppSession();
-            }
-        };
-    </script>
-</body>
-</html>
+        function setSession(userData) {
+            currentUser = userData;
+            document.getElementById('loginForm').reset();
+            document.getElementById('hojaAcceso').classList.remove('active');
+            document.getElementById
