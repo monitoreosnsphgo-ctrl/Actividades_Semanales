@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         @media print {
@@ -44,7 +46,7 @@
         </div>
     </div>
 
-    <!-- VIEW 1: Login (Hoja 1) -->
+    <!-- HOJA 1: Login / Acceso -->
     <div id="view-login" class="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 min-h-screen">
         <div class="max-w-md w-full bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-white/20">
             <div class="text-center mb-8">
@@ -55,12 +57,12 @@
                 <p class="text-slate-500 text-sm mt-1">Servicio Nacional de Salud Pública - Hidalgo</p>
             </div>
 
-            <!-- Firebase Connection Notice & Config Toggle -->
+            <!-- Firebase Connection Notice -->
             <div class="mb-6 p-3.5 bg-indigo-50/80 rounded-2xl border border-indigo-100 text-xs text-indigo-900 flex items-start gap-2.5">
                 <i class="fa-solid fa-database text-indigo-600 mt-0.5 shrink-0 text-sm"></i>
                 <div>
-                    <span class="font-semibold block mb-0.5">Conectado a Firestore (Colección 'Usuarios')</span>
-                    <span class="text-[11px] text-indigo-700 leading-relaxed">Consulta automática en la nube. Si no hay registros previos, puede inicializar usuarios automáticos o configurar su credencial.</span>
+                    <span class="font-semibold block mb-0.5">Base de Datos Firestore (Colección 'Usuarios')</span>
+                    <span class="text-[11px] text-indigo-700 leading-relaxed">Conexión directa en la nube. Si no existen registros previos, pulse el botón inferior para inicializar automáticamente las credenciales institucionales.</span>
                 </div>
             </div>
 
@@ -71,7 +73,7 @@
                         <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                             <i class="fa-solid fa-user"></i>
                         </span>
-                        <input type="text" id="login-user" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition text-sm" placeholder="Ej. admin, validador1, tula">
+                        <input type="text" id="login-user" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition text-sm" placeholder="Ej. admin, validador, tula">
                     </div>
                 </div>
 
@@ -91,10 +93,10 @@
                 </button>
             </form>
 
-            <div class="mt-6 flex flex-col gap-2 pt-6 border-t border-slate-100 text-center">
-                <button onclick="seedInitialUsers()" class="text-xs font-medium text-emerald-600 hover:text-emerald-700 transition flex items-center justify-center gap-1.5 mx-auto">
+            <div class="mt-6 flex flex-col gap-2.5 pt-6 border-t border-slate-100 text-center">
+                <button onclick="seedInitialUsers()" class="text-xs font-medium text-emerald-600 hover:text-emerald-700 transition flex items-center justify-center gap-1.5 mx-auto bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100 w-full">
                     <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <span>Inicializar Usuarios Predeterminados en Firestore</span>
+                    <span>Inicializar Usuarios en Firebase</span>
                 </button>
                 <button onclick="toggleSetupModal(true)" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition flex items-center justify-center gap-1.5 mx-auto">
                     <i class="fa-solid fa-circle-question"></i>
@@ -125,14 +127,14 @@
                 </nav>
 
                 <!-- User Profile & Logout -->
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
                     <div class="text-right hidden sm:block">
                         <span id="current-username" class="block text-xs font-bold text-slate-800">Usuario</span>
                         <span class="block text-[10px] text-slate-500">Sesión Activa</span>
                     </div>
-                    <button onclick="logout()" class="flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl transition text-xs font-medium border border-rose-200/50" title="Salir del sistema">
+                    <button onclick="logout()" class="flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl transition text-xs font-medium border border-rose-200/50" title="Cerrar Sesión / Salir del Sistema">
                         <i class="fa-solid fa-power-off"></i>
-                        <span class="hidden sm:inline">Salir</span>
+                        <span class="hidden sm:inline">Cerrar Sesión</span>
                     </button>
                 </div>
             </div>
@@ -242,33 +244,37 @@
                             <textarea id="cap-actividad" rows="3" required placeholder="Describa detalladamente la actividad a realizar..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition"></textarea>
                         </div>
 
-                        <!-- Acciones prioritarias (al menos 2 opciones) -->
+                        <!-- Acciones prioritarias (mínimo 2) -->
                         <div>
                             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Acciones Prioritarias en Salud (Seleccione al menos 2) *</label>
                             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
                                 <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="Prevención y Control de Enfermedades Transmisibles" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>Prev. Enf. Transmisibles</span>
+                                    <input type="checkbox" name="acciones" value="Juntas Comunitarias" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>Juntas Comunitarias</span>
                                 </label>
                                 <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="Vacunación Universal" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>Vacunación Universal</span>
+                                    <input type="checkbox" name="acciones" value="Jornadas Intensivas" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>Jornadas Intensivas</span>
                                 </label>
                                 <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="Salud Materna y Perinatal" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>Salud Materna y Perinatal</span>
+                                    <input type="checkbox" name="acciones" value="Guardianes Comunitarios" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>Guardianes Comunitarios</span>
                                 </label>
                                 <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="Promoción de la Salud y Prevención de Adicciones" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>Promoción de la Salud</span>
+                                    <input type="checkbox" name="acciones" value="3xmi Salud" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>3xmi Salud</span>
                                 </label>
                                 <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="Atención Médica y Consultas Itinerantes" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>Atención Médica Itinerante</span>
+                                    <input type="checkbox" name="acciones" value="A Salv0" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>A Salv0</span>
                                 </label>
                                 <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
-                                    <input type="checkbox" name="acciones" value="Vigilancia Epidemiológica y Brotes" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                                    <span>Vigilancia Epidemiológica</span>
+                                    <input type="checkbox" name="acciones" value="Salud Mental" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>Salud Mental</span>
+                                </label>
+                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
+                                    <input type="checkbox" name="acciones" value="Fortalecimiento Vacunación" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>Fortalecimiento Vacunación</span>
                                 </label>
                             </div>
                         </div>
@@ -373,10 +379,19 @@
                             </h2>
                             <p class="text-slate-500 text-sm mt-1">Genere reportes ejecutivos limpios filtrados por semana o distrito.</p>
                         </div>
-                        <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl transition shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-print"></i>
-                            <span>Imprimir Reporte</span>
-                        </button>
+                        <div class="flex items-center gap-3">
+                            <!-- Botón Excel exclusivo para Administrador en módulo de Impresión / General -->
+                            <div id="admin-excel-container" class="hidden">
+                                <button onclick="downloadExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-5 rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center gap-2 text-xs">
+                                    <i class="fa-solid fa-file-excel text-sm"></i>
+                                    <span>Descargar Base de Datos (.xlsx)</span>
+                                </button>
+                            </div>
+                            <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl transition shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 text-xs">
+                                <i class="fa-solid fa-print"></i>
+                                <span>Imprimir Reporte</span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Print Filters (No print) -->
@@ -569,7 +584,7 @@
             <div class="p-6 space-y-6 text-sm text-slate-600 leading-relaxed">
                 <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-indigo-900">
                     <p class="font-semibold mb-1"><i class="fa-solid fa-circle-info mr-2"></i>Arquitectura Cloud Firestore:</p>
-                    <p class="text-xs">El sistema consulta la colección obligatoria <code class="bg-white px-1 py-0.5 rounded font-mono text-indigo-600">Usuarios</code> dentro de la ruta pública de artefactos en Firestore. Para inicializar los usuarios predeterminados de prueba con un solo clic, presione el botón verde en la pantalla de inicio.</p>
+                    <p class="text-xs">El sistema consulta la colección obligatoria <code class="bg-white px-1 py-0.5 rounded font-mono text-indigo-600">Usuarios</code> en la ruta pública de artefactos de Firestore. Para registrar automáticamente las credenciales institucionales, presione el botón verde en la pantalla de inicio.</p>
                 </div>
 
                 <div class="space-y-4">
@@ -577,7 +592,7 @@
                         <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">1</div>
                         <div>
                             <h4 class="font-bold text-slate-900">Crear proyecto en Firebase Console</h4>
-                            <p class="text-xs mt-1">Ingrese a <a href="https://console.firebase.google.com/" target="_blank" class="text-indigo-600 underline">Firebase Console</a>, cree un nuevo proyecto y active <strong>Cloud Firestore</strong> en modo de prueba.</p>
+                            <p class="text-xs mt-1">Ingrese a <a href="https://console.firebase.google.com/" target="_blank" class="text-indigo-600 underline">Firebase Console</a>, cree un proyecto y active <strong>Cloud Firestore</strong> en modo de prueba.</p>
                         </div>
                     </div>
 
@@ -585,11 +600,12 @@
                         <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">2</div>
                         <div>
                             <h4 class="font-bold text-slate-900">Colección "Usuarios" (Credenciales y Roles)</h4>
-                            <p class="text-xs mt-1">La aplicación lee y escribe en la colección <code class="bg-slate-100 px-1 rounded font-mono text-indigo-600">Usuarios</code> con los siguientes campos:</p>
+                            <p class="text-xs mt-1">Campos requeridos en Firestore:</p>
                             <ul class="list-disc list-inside text-xs mt-2 space-y-1 pl-2 text-slate-700">
-                                <li><code class="font-mono">usuario</code> (string): Ej. <span class="text-indigo-600 font-semibold">admin</span>, <span class="text-indigo-600 font-semibold">validador</span>, <span class="text-indigo-600 font-semibold">tula</span></li>
+                                <li><code class="font-mono">usuario</code> (string): <span class="text-indigo-600 font-semibold">admin</span>, <span class="text-indigo-600 font-semibold">validador</span>, <span class="text-indigo-600 font-semibold">tula</span>, etc.</li>
                                 <li><code class="font-mono">password</code> (string): Contraseña de acceso</li>
                                 <li><code class="font-mono">tipoAcceso</code> (string): <code class="bg-slate-100 px-1 rounded text-indigo-600">Administrador</code>, <code class="bg-slate-100 px-1 rounded text-indigo-600">Validadores</code> o <code class="bg-slate-100 px-1 rounded text-indigo-600">Distritos</code></li>
+                                <li><code class="font-mono">distritoAsignado</code> (string, opcional): Ej. <code class="bg-slate-100 px-1 rounded text-indigo-600">Distrito Tula</code></li>
                             </ul>
                         </div>
                     </div>
@@ -597,8 +613,8 @@
                     <div class="flex gap-3">
                         <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">3</div>
                         <div>
-                            <h4 class="font-bold text-slate-900">Colección "RegistroDatos" (Captura y Validación)</h4>
-                            <p class="text-xs mt-1">Cada actividad registrada se almacena y sincroniza de forma segura en la colección <code class="bg-slate-100 px-1 py-0.5 rounded font-mono text-indigo-600 font-mono">RegistroDatos</code>.</p>
+                            <h4 class="font-bold text-slate-900">Colección "RegistroDatos"</h4>
+                            <p class="text-xs mt-1">Las planeaciones semanales se sincronizan de forma segura en <code class="bg-slate-100 px-1 py-0.5 rounded font-mono text-indigo-600">RegistroDatos</code>.</p>
                         </div>
                     </div>
                 </div>
@@ -681,7 +697,7 @@
             }
         };
 
-        // Handle Login with real Firestore query against collection 'Usuarios'
+        // Handle Login with robust Firestore query against collection 'Usuarios'
         window.handleLogin = async function(event) {
             event.preventDefault();
             const usernameInput = document.getElementById('login-user').value.trim();
@@ -690,7 +706,7 @@
             showSpinner("Consultando credenciales en Firestore...");
 
             try {
-                // Query Firestore collection 'Usuarios' strictly as requested
+                // Query Firestore collection 'Usuarios' strictly at the correct path
                 const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'Usuarios');
                 const snapshot = await getDocs(usersRef);
                 
@@ -702,13 +718,14 @@
                     }
                 });
 
-                // If Firestore collection is empty or unreachable, provide automatic fallback seed or mock accounts
+                // If collection is empty, auto-seed and verify
                 if (!foundUser && snapshot.empty) {
-                    console.warn("Colección 'Usuarios' vacía en Firestore. Intentando inicialización automática...");
+                    console.warn("Colección 'Usuarios' vacía en Firestore. Inicializando datos por defecto...");
                     const defaultUsers = [
                         { usuario: 'admin', password: '123', tipoAcceso: 'Administrador' },
                         { usuario: 'validador', password: '123', tipoAcceso: 'Validadores' },
-                        { usuario: 'tula', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Tula' }
+                        { usuario: 'tula', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Tula' },
+                        { usuario: 'pachuca', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Pachuca' }
                     ];
                     
                     for (const u of defaultUsers) {
@@ -728,23 +745,24 @@
                     sessionStorage.setItem('ps_user', JSON.stringify(foundUser));
                     initAppSession();
                 } else {
-                    showModal("Acceso Denegado", "Usuario o contraseña incorrectos en la base de datos Firestore. Asegúrese de haber creado los usuarios o pulse 'Inicializar Usuarios Predeterminados'.", "error");
+                    showModal("Acceso Denegado", "Usuario o contraseña incorrectos en la base de datos Firestore. Asegúrese de haber creado los usuarios o pulse 'Inicializar Usuarios en Firebase'.", "error");
                 }
             } catch (error) {
                 hideSpinner();
                 console.error("Login error connecting to Firestore:", error);
-                // Fallback authentication for offline or restricted environments
+                // Robust offline fallback authentication
                 if ((usernameInput === 'admin' && passwordInput === '123') || 
                     (usernameInput === 'validador' && passwordInput === '123') ||
                     (usernameInput === 'tula' && passwordInput === '123')) {
                     currentUserData = {
                         usuario: usernameInput,
-                        tipoAcceso: usernameInput === 'admin' ? 'Administrador' : (usernameInput === 'validador' ? 'Validadores' : 'Distritos')
+                        tipoAcceso: usernameInput === 'admin' ? 'Administrador' : (usernameInput === 'validador' ? 'Validadores' : 'Distritos'),
+                        distritoAsignado: usernameInput === 'tula' ? 'Distrito Tula' : ''
                     };
                     sessionStorage.setItem('ps_user', JSON.stringify(currentUserData));
                     initAppSession();
                 } else {
-                    showModal("Error de Conexión", "No se pudo consultar la colección 'Usuarios' en Firebase. Verifique su conexión o la configuración de Firestore.", "warning");
+                    showModal("Error de Conexión", "No se pudo consultar la colección 'Usuarios' en Firebase. Verifique su conexión o reglas de seguridad.", "warning");
                 }
             }
         };
@@ -756,6 +774,14 @@
             
             const badge = document.getElementById('user-role-badge');
             badge.textContent = currentUserData.tipoAcceso;
+
+            // Show or hide admin exclusive Excel download button container
+            const adminExcelContainer = document.getElementById('admin-excel-container');
+            if (currentUserData.tipoAcceso === 'Administrador') {
+                adminExcelContainer.classList.remove('hidden');
+            } else {
+                adminExcelContainer.classList.add('hidden');
+            }
 
             setupNavigationAndSheets();
             setDefaultCaptureDate();
@@ -786,7 +812,7 @@
                 allowedSheets = [
                     { id: 'sheet-capture', name: 'Captura', icon: 'fa-file-pen' },
                     { id: 'sheet-modify', name: 'Modificación', icon: 'fa-pen-to-square' },
-                    { id: 'sheet-print', name: 'Impresión', icon: 'fa-print' },
+                    { id: 'sheet-print', name: 'Impresión / Reportes', icon: 'fa-print' },
                     { id: 'sheet-validate', name: 'Validación', icon: 'fa-circle-check' }
                 ];
             } else if (role === 'Distritos') {
@@ -819,7 +845,6 @@
                 navTabsMobile.appendChild(btnMob);
             });
 
-            // Activate first allowed sheet
             if (allowedSheets.length > 0) {
                 switchSheet(allowedSheets[0].id);
             }
@@ -829,7 +854,6 @@
             document.querySelectorAll('.app-sheet').forEach(s => s.classList.add('hidden'));
             document.getElementById(sheetId).classList.remove('hidden');
 
-            // Update active states
             document.querySelectorAll('#nav-tabs button, #nav-tabs-mobile button').forEach(b => {
                 b.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
                 b.classList.add('text-slate-600', 'hover:bg-white');
@@ -846,6 +870,7 @@
             if (currentUserData && currentUserData.tipoAcceso === 'Distritos' && currentUserData.distritoAsignado) {
                 const selectDistrito = document.getElementById('cap-distrito');
                 selectDistrito.value = currentUserData.distritoAsignado;
+                selectDistrito.setAttribute('disabled', 'true');
             }
         }
 
@@ -853,7 +878,6 @@
         window.handleCaptureSubmit = async function(event) {
             event.preventDefault();
 
-            // Collect checked priority actions (at least 2 required)
             const checkboxes = document.querySelectorAll('input[name="acciones"]:checked');
             if (checkboxes.length < 2) {
                 showModal("Acciones Requeridas", "Debe seleccionar al menos 2 acciones prioritarias en salud pública.", "warning");
@@ -861,10 +885,12 @@
             }
 
             const acciones = Array.from(checkboxes).map(cb => cb.value);
+            const distritoVal = currentUserData.tipoAcceso === 'Distritos' && currentUserData.distritoAsignado ? 
+                               currentUserData.distritoAsignado : document.getElementById('cap-distrito').value;
 
             const recordData = {
                 fechaCaptura: document.getElementById('cap-fecha-captura').value,
-                distrito: document.getElementById('cap-distrito').value,
+                distrito: distritoVal,
                 periodoProgramado: document.getElementById('cap-periodo').value,
                 semanaEpidemiologica: document.getElementById('cap-semana').value,
                 diaActividad: document.getElementById('cap-dia').value,
@@ -927,6 +953,9 @@
             const filterDia = document.getElementById('mod-filter-dia').value;
 
             let filtered = allRecords.filter(r => {
+                if (currentUserData.tipoAcceso === 'Distritos' && currentUserData.distritoAsignado) {
+                    if (r.distrito !== currentUserData.distritoAsignado) return false;
+                }
                 if (filterDistrito && r.distrito !== filterDistrito) return false;
                 if (filterDia && r.diaActividad !== filterDia) return false;
                 return true;
@@ -1054,13 +1083,16 @@
             const distritoFilter = document.getElementById('print-filter-distrito').value;
 
             let filtered = allRecords.filter(r => {
+                if (currentUserData.tipoAcceso === 'Distritos' && currentUserData.distritoAsignado) {
+                    if (r.distrito !== currentUserData.distritoAsignado) return false;
+                }
                 if (semanaFilter && String(r.semanaEpidemiologica) !== String(semanaFilter)) return false;
                 if (distritoFilter && r.distrito !== distritoFilter) return false;
                 return true;
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">No hay registros para los filtros de impresión seleccionados.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">No hay registros para los filtros seleccionados.</td></tr>`;
                 return;
             }
 
@@ -1084,6 +1116,54 @@
                     </td>
                 </tr>
             `).join('');
+        };
+
+        // EXCLUSIVE ADMIN FEATURE: Download Database in Excel (.xlsx) using SheetJS
+        window.downloadExcel = function() {
+            if (allRecords.length === 0) {
+                showModal("Sin Datos", "No existen registros en la base de datos para exportar.", "warning");
+                return;
+            }
+
+            showSpinner("Generando archivo Excel...");
+
+            try {
+                // Format records cleanly for Excel
+                const excelData = allRecords.map((r, index) => ({
+                    "No.": index + 1,
+                    "Fecha Captura": r.fechaCaptura || "",
+                    "Distrito": r.distrito || "",
+                    "Periodo Programado": r.periodoProgramado || "",
+                    "Semana Epidemiológica": r.semanaEpidemiologica || "",
+                    "Día Actividad": r.diaActividad || "",
+                    "Fecha Actividad": r.fechaActividad || "",
+                    "Sede de la Actividad": r.sedeActividad || "",
+                    "Actividad Programada": r.actividadProgramada || "",
+                    "Acciones Prioritarias": (r.accionesPrioritarias || []).join(", "),
+                    "Grupo Itinerante": r.requiereItinerante || "No",
+                    "Estatus Validación": r.validado || "No",
+                    "Notas u Observaciones": r.notas || "",
+                    "Registrado Por": r.creadoPor || ""
+                }));
+
+                const worksheet = XLSX.utils.json_to_sheet(excelData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "PlaneacionSemanal");
+
+                // Auto-fit column widths
+                const maxCols = [{wch: 5}, {wch: 15}, {wch: 25}, {wch: 20}, {wch: 12}, {wch: 12}, {wch: 15}, {wch: 25}, {wch: 30}, {wch: 35}, {wch: 15}, {wch: 15}, {wch: 25}, {wch: 15}];
+                worksheet['!cols'] = maxCols;
+
+                const fileName = `Planeacion_Semanal_Hidalgo_${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(workbook, fileName);
+
+                hideSpinner();
+                showModal("¡Exportación Exitosa!", "La base de datos se ha descargado correctamente en formato Excel (.xlsx).", "success");
+            } catch (error) {
+                hideSpinner();
+                console.error("Error generating Excel:", error);
+                showModal("Error", "No se pudo generar el archivo Excel.", "error");
+            }
         };
 
         // Render Validate Table (Hoja 5)
