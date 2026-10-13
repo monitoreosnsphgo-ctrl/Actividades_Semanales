@@ -26,13 +26,15 @@
     <script>
         // ¡IMPORTANTE! Reemplaza estos valores con la configuración de tu consola de Firebase
         const firebaseConfig = {
-            apiKey: "TU_API_KEY",
-            authDomain: "tu-proyecto.firebaseapp.com",
+            apiKey: "AIzaSyAYMuQZmL9Ale3SiLf-54HCR2sq7BuNadk",
+            authDomain: "planeacion-semanal.firebaseapp.com",
             projectId: "planeacion-semanal",
-            storageBucket: "tu-proyecto.appspot.com",
-            messagingSenderId: "TU_SENDER_ID",
-            appId: "TU_APP_ID"
+            storageBucket: "planeacion-semanal.firebasestorage.app",
+            messagingSenderId: "241332209963",
+            appId: "1:241332209963:web:4085089da522d678611d6e"
         };
+        // Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
         // Inicializar Firebase
         if (!firebase.apps.length) {
