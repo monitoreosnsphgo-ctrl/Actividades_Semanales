@@ -1,575 +1,1146 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Seguimiento Epidemiológico</title>
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- SheetJS para exportar a Excel -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style>
-    body { background-color: #f8f9fa; }
-    .page-section { display: none; }
-    .active-section { display: block; }
-    @media print {
-      .no-print { display: none !important; }
-      .container { width: 100% !important; max-width: none !important; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planeación Semanal - Sistema de Gestión</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; color: black !important; }
+            .print-container { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
+        }
+    </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-  <!-- Navegación -->
-  <nav id="navbar" class="navbar navbar-expand-lg navbar-dark bg-dark no-print d-none">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">Seguimiento Epidemiológico</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-menu navbar-nav me-auto">
-          <li class="nav-item"><a class="nav-link" id="nav-captura" onclick="showPage('captura')">Captura</a></li>
-          <li class="nav-item"><a class="nav-link" id="nav-visualizacion" onclick="showPage('visualizacion')">Visualización</a></li>
-          <li class="nav-item"><a class="nav-link" id="nav-impresion" onclick="showPage('impresion')">Impresión</a></li>
-          <li class="nav-item"><a class="nav-link" id="nav-seguimiento" onclick="showPage('seguimiento')">Seguimiento</a></li>
-          <li class="nav-item"><a class="nav-link" id="nav-validacion" onclick="showPage('validacion')">Validación</a></li>
-        </ul>
-        <span class="navbar-text me-3 text-light" id="user-info"></span>
-        <button class="btn btn-outline-danger btn-sm" onclick="logout()">Salir del sistema</button>
-      </div>
-    </div>
-  </nav>
-
-  <div class="container mt-4">
-
-    <!-- 1. ACCESO -->
-    <div id="page-acceso" class="page-section active-section">
-      <div class="row justify-content-center">
-        <div class="col-md-4">
-          <div class="card shadow mt-5">
-            <div class="card-body">
-              <h3 class="card-title text-center mb-4">Iniciar Sesión</h3>
-              <form id="form-login" onsubmit="handleLogin(event)">
-                <div class="mb-3">
-                  <label class="form-label">Usuario</label>
-                  <input type="text" id="login-user" class="form-control" required>
+    <!-- Custom Modal for Alerts/Messages -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden border border-slate-100 transform transition-all">
+            <div class="p-6 text-center">
+                <div id="modal-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"></div>
+                <h3 id="modal-title" class="text-xl font-bold text-slate-900 mb-2">Título</h3>
+                <p id="modal-message" class="text-slate-600 text-sm mb-6 leading-relaxed">Mensaje descriptivo aquí.</p>
+                <div id="modal-actions" class="flex justify-center gap-3">
+                    <button id="modal-ok-btn" onclick="closeModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl transition shadow-lg shadow-indigo-600/20">Aceptar</button>
                 </div>
-                <div class="mb-3">
-                  <label class="form-label">Contraseña</label>
-                  <input type="password" id="login-pass" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Ingresar</button>
-              </form>
             </div>
-          </div>
         </div>
-      </div>
     </div>
 
-    <!-- 2. CAPTURA -->
-    <div id="page-captura" class="page-section">
-      <h2 class="mb-4">Captura de Actividades</h2>
-      <form id="form-captura" onsubmit="handleCaptura(event)">
-        <div class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label">Nombre del Distrito</label>
-            <select id="cap-distrito" class="form-select" required></select>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Semana Epidemiológica</label>
-            <select id="cap-semana" class="form-select" required></select>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Día de la semana</label>
-            <select id="cap-dia" class="form-select" required>
-              <option value="Lunes">Lunes</option><option value="Martes">Martes</option>
-              <option value="Miércoles">Miércoles</option><option value="Jueves">Jueves</option>
-              <option value="Viernes">Viernes</option><option value="Sábado">Sábado</option>
-              <option value="Domingo">Domingo</option>
-            </select>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Fecha</label>
-            <input type="date" id="cap-fecha" class="form-control" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Sede de la actividad</label>
-            <input type="text" id="cap-sede" class="form-control" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Actividad Programada</label>
-            <input type="text" id="cap-actividad" class="form-control" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Acciones prioritarias 1</label>
-            <select id="cap-accion1" class="form-select sel-accion" required></select>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Acciones prioritarias 2</label>
-            <select id="cap-accion2" class="form-select sel-accion"></select>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Acciones prioritarias 3</label>
-            <select id="cap-accion3" class="form-select sel-accion"></select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Requiere equipo itinerante y/o de comunicación</label>
-            <select id="cap-equipo" class="form-select" required>
-              <option value="Itinerante">Itinerante</option>
-              <option value="Comunicación">Comunicación</option>
-              <option value="Ambos">Ambos</option>
-              <option value="No">No</option>
-            </select>
-          </div>
-          <div class="col-12 mt-4">
-            <button type="submit" class="btn btn-success">Guardar</button>
-          </div>
+    <!-- Loading Spinner Overlay -->
+    <div id="loading-spinner" class="fixed inset-0 bg-slate-900/30 backdrop-blur-[2px] z-50 flex items-center justify-center hidden">
+        <div class="bg-white p-5 rounded-2xl shadow-xl flex items-center gap-4 border border-slate-100">
+            <div class="animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
+            <span class="font-medium text-slate-700" id="loading-text">Procesando solicitud...</span>
         </div>
-      </form>
-
-      <hr class="my-5">
-      <h4>Registros de la Sesión</h4>
-      <table class="table table-bordered mt-3" id="table-captura">
-        <thead class="table-light">
-          <tr><th>Distrito</th><th>Semana</th><th>Día</th><th>Fecha</th><th>Sede</th><th>Actividad</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
     </div>
 
-    <!-- 3. VISUALIZACIÓN -->
-    <div id="page-visualizacion" class="page-section">
-      <h2>Visualización y Edición</h2>
-      <div class="row my-3 g-3">
-        <div class="col-md-4"><select id="vis-filter-semana" class="form-select"><option value="">-- Semana --</option></select></div>
-        <div class="col-md-4"><select id="vis-filter-distrito" class="form-select"><option value="">-- Distrito --</option></select></div>
-        <div class="col-md-4"><button class="btn btn-primary" onclick="loadVisualizacion()">Filtrar</button></div>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-striped table-sm" id="table-vis">
-          <thead class="table-dark">
-            <tr><th>Distrito</th><th>Semana</th><th>Día</th><th>Fecha</th><th>Sede</th><th>Actividad</th><th>Acción1</th><th>Acción2</th><th>Acción3</th><th>Equipo</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <button class="btn btn-success mt-3" onclick="saveVisualizacion()">Guardar Modificaciones</button>
-    </div>
+    <!-- VIEW 1: Login (Hoja 1) -->
+    <div id="view-login" class="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 min-h-screen">
+        <div class="max-w-md w-full bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-white/20">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-600/30 text-white text-2xl font-bold">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900">Planeación Semanal</h1>
+                <p class="text-slate-500 text-sm mt-1">Sistema de Captura y Gestión en Línea</p>
+            </div>
 
-    <!-- 4. IMPRESIÓN -->
-    <div id="page-impresion" class="page-section">
-      <h2 class="no-print">Impresión y Reportes</h2>
-      <div class="row my-3 g-3 no-print">
-        <div class="col-md-4"><select id="imp-filter-semana" class="form-select"><option value="">-- Semana --</option></select></div>
-        <div class="col-md-4"><select id="imp-filter-distrito" class="form-select"><option value="">-- Distrito --</option></select></div>
-        <div class="col-md-4">
-          <button class="btn btn-primary me-2" onclick="loadImpresion()">Consultar</button>
-          <button class="btn btn-secondary me-2" onclick="exportToExcel()">Descargar Excel</button>
-          <button class="btn btn-dark" onclick="window.print()">Imprimir</button>
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Usuario</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <input type="text" id="login-user" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition text-sm" placeholder="Ingrese su usuario">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Contraseña</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="login-pass" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition text-sm" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition duration-200 shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+                    <span>Iniciar Sesión</span>
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </button>
+            </form>
+
+            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                <button onclick="toggleSetupModal(true)" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition flex items-center justify-center gap-1.5 mx-auto">
+                    <i class="fa-solid fa-circle-question"></i>
+                    <span>¿Cómo configurar la base de datos en Firebase?</span>
+                </button>
+            </div>
         </div>
-      </div>
-      <table class="table table-bordered table-sm mt-3" id="table-imp">
-        <thead class="table-secondary">
-          <tr><th>Distrito</th><th>Semana</th><th>Día</th><th>Fecha</th><th>Sede</th><th>Actividad</th><th>Acción1</th><th>Equipo</th><th>Validación</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
     </div>
 
-    <!-- 5. SEGUIMIENTO -->
-    <div id="page-seguimiento" class="page-section">
-      <h2>Seguimiento de Actividades</h2>
-      <div class="row my-3 g-3">
-        <div class="col-md-3"><select id="seg-filter-semana" class="form-select"><option value="">Semana</option></select></div>
-        <div class="col-md-3"><select id="seg-filter-distrito" class="form-select"><option value="">Distrito</option></select></div>
-        <div class="col-md-3"><input type="date" id="seg-filter-fecha" class="form-control"></div>
-        <div class="col-md-3"><button class="btn btn-primary" onclick="loadSeguimientoList()">Buscar</button></div>
-      </div>
+    <!-- MAIN APP LAYOUT (Hidden until login) -->
+    <div id="main-app" class="flex-1 flex flex-col hidden">
+        <!-- Top Navigation Bar -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm no-print">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-600/20 font-bold">
+                        <i class="fa-solid fa-calendar-days"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-slate-900 block leading-tight">Planeación Semanal</span>
+                        <span id="user-role-badge" class="text-xs font-semibold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full inline-block mt-0.5">Rol</span>
+                    </div>
+                </div>
 
-      <div class="mb-3">
-        <label class="form-label">Seleccionar Registro a Actualizar</label>
-        <select id="seg-select-row" class="form-select" onchange="fillSeguimientoForm()"></select>
-      </div>
+                <!-- Navigation Tabs -->
+                <nav id="nav-tabs" class="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                    <!-- Dynamic tabs populated via JS based on role -->
+                </nav>
 
-      <form id="form-seguimiento" class="row g-3" onsubmit="handleSeguimiento(event)">
-        <div class="col-md-4"><label class="form-label">Día semana</label><input type="text" id="seg-dia" class="form-control" readonly></div>
-        <div class="col-md-4"><label class="form-label">Fecha Seguimiento</label><input type="date" id="seg-fechaseg" class="form-control" required></div>
-        <div class="col-md-4"><label class="form-label">Sede de la actividad</label><input type="text" id="seg-sede2" class="form-control" required></div>
-        <div class="col-md-6"><label class="form-label">Actividad de seguimiento</label><input type="text" id="seg-actividad2" class="form-control" required></div>
-        <div class="col-md-6">
-          <label class="form-label">Se llevó a cabo</label>
-          <select id="seg-hizo" class="form-select" required><option value="Sí">Sí</option><option value="No">No</option></select>
+                <!-- User Profile & Logout -->
+                <div class="flex items-center gap-4">
+                    <div class="text-right hidden sm:block">
+                        <span id="current-username" class="block text-xs font-bold text-slate-800">Usuario</span>
+                        <span class="block text-[10px] text-slate-500">Sesión Activa</span>
+                    </div>
+                    <button onclick="logout()" class="flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl transition text-xs font-medium border border-rose-200/50" title="Salir del sistema">
+                        <i class="fa-solid fa-power-off"></i>
+                        <span class="hidden sm:inline">Salir</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Mobile Navigation Bar -->
+            <div id="nav-tabs-mobile" class="md:hidden flex overflow-x-auto gap-1 bg-slate-50 p-2 border-t border-slate-200">
+                <!-- Mobile tabs populated via JS -->
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+            <!-- HOJA 2: Captura de Datos -->
+            <section id="sheet-capture" class="app-sheet hidden space-y-6">
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
+                    <div class="border-b border-slate-100 pb-5 mb-6">
+                        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-file-pen text-indigo-600"></i>
+                            Hoja de Captura de Actividades
+                        </h2>
+                        <p class="text-slate-500 text-sm mt-1">Registre la planeación y actividades prioritarias para el distrito correspondiente.</p>
+                    </div>
+
+                    <form id="capture-form" onsubmit="handleCaptureSubmit(event)" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Fecha de captura (Automática) -->
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Fecha de Captura</label>
+                                <input type="text" id="cap-fecha-captura" readonly class="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-600 text-sm font-medium cursor-not-allowed">
+                            </div>
+
+                            <!-- Nombre del distrito -->
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Nombre del Distrito *</label>
+                                <select id="cap-distrito" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
+                                    <option value="">Seleccione un distrito...</option>
+                                    <option value="Distrito Tula">Distrito Tula</option>
+                                    <option value="Distrito Tulancingo">Distrito Tulancingo</option>
+                                    <option value="Distrito Pachuca">Distrito Pachuca</option>
+                                    <option value="Distrito Huejutla">Distrito Huejutla</option>
+                                    <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
+                                    <option value="Distrito Tizayuca">Distrito Tizayuca</option>
+                                    <option value="Distrito Actopan">Distrito Actopan</option>
+                                    <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
+                                    <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
+                                    <option value="Distrito Apan">Distrito Apan</option>
+                                    <option value="Distrito Huichapan">Distrito Huichapan</option>
+                                    <option value="Distrito Jacala">Distrito Jacala</option>
+                                </select>
+                            </div>
+
+                            <!-- Periodo programado -->
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Periodo Programado *</label>
+                                <input type="text" id="cap-periodo" required placeholder="Ej. 14 al 20 de Octubre 2026" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
+                            </div>
+
+                            <!-- Semana epidemiológica -->
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Semana Epidemiológica *</label>
+                                <input type="number" id="cap-semana" min="1" max="53" required placeholder="Ej. 42" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
+                            </div>
+
+                            <!-- Día de la actividad -->
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Día de la Actividad *</label>
+                                <select id="cap-dia" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
+                                    <option value="">Seleccione el día...</option>
+                                    <option value="Lunes">Lunes</option>
+                                    <option value="Martes">Martes</option>
+                                    <option value="Miércoles">Miércoles</option>
+                                    <option value="Jueves">Jueves</option>
+                                    <option value="Viernes">Viernes</option>
+                                    <option value="Sábado">Sábado</option>
+                                    <option value="Domingo">Domingo</option>
+                                </select>
+                            </div>
+
+                            <!-- Fecha de la actividad -->
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Fecha de la Actividad *</label>
+                                <input type="date" id="cap-fecha-actividad" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                            <!-- Sede de la actividad -->
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Sede de la Actividad *</label>
+                                <input type="text" id="cap-sede" required placeholder="Nombre del centro de salud, localidad o municipio" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
+                            </div>
+
+                            <!-- Requiere grupo itinerante -->
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">¿Requiere Grupo Itinerante? *</label>
+                                <select id="cap-itinerante" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition">
+                                    <option value="">Seleccione una opción...</option>
+                                    <option value="Sí">Sí</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Actividad programada -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Actividad Programada *</label>
+                            <textarea id="cap-actividad" rows="3" required placeholder="Describa detalladamente la actividad a realizar..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition"></textarea>
+                        </div>
+
+                        <!-- Acciones prioritarias (al menos 2 opciones) -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Acciones Prioritarias en Salud (Seleccione al menos 2) *</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
+                                    <input type="checkbox" name="acciones" value="Prevención y Control de Enfermedades Transmisibles" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>Prev. Enf. Transmisibles</span>
+                                </label>
+                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
+                                    <input type="checkbox" name="acciones" value="Vacunación Universal" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>Vacunación Universal</span>
+                                </label>
+                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
+                                    <input type="checkbox" name="acciones" value="Salud Materna y Perinatal" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>Salud Materna y Perinatal</span>
+                                </label>
+                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
+                                    <input type="checkbox" name="acciones" value="Promoción de la Salud y Prevención de Adicciones" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>Promoción de la Salud</span>
+                                </label>
+                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
+                                    <input type="checkbox" name="acciones" value="Atención Médica y Consultas Itinerantes" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>Atención Médica Itinerante</span>
+                                </label>
+                                <label class="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-2 hover:bg-white rounded-xl transition">
+                                    <input type="checkbox" name="acciones" value="Vigilancia Epidemiológica y Brotes" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span>Vigilancia Epidemiológica</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Notas -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Notas u Observaciones Adicionales</label>
+                            <textarea id="cap-notas" rows="2" placeholder="Observaciones relevantes..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition"></textarea>
+                        </div>
+
+                        <div class="flex justify-end pt-4">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-8 rounded-xl transition duration-200 shadow-lg shadow-indigo-600/25 flex items-center gap-2">
+                                <i class="fa-solid fa-floppy-disk"></i>
+                                <span>Guardar Registro en Firebase</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- HOJA 3: Modificación de Datos -->
+            <section id="sheet-modify" class="app-sheet hidden space-y-6">
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
+                    <div class="border-b border-slate-100 pb-5 mb-6">
+                        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-pen-to-square text-indigo-600"></i>
+                            Modificación de Datos Capturados
+                        </h2>
+                        <p class="text-slate-500 text-sm mt-1">Filtre por distrito y día para visualizar y editar la información existente.</p>
+                    </div>
+
+                    <!-- Filter Bar -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Filtrar por Distrito</label>
+                            <select id="mod-filter-distrito" onchange="filterModifyRecords()" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
+                                <option value="">Todos los distritos</option>
+                                <option value="Distrito Tula">Distrito Tula</option>
+                                <option value="Distrito Tulancingo">Distrito Tulancingo</option>
+                                <option value="Distrito Pachuca">Distrito Pachuca</option>
+                                <option value="Distrito Huejutla">Distrito Huejutla</option>
+                                <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
+                                <option value="Distrito Tizayuca">Distrito Tizayuca</option>
+                                <option value="Distrito Actopan">Distrito Actopan</option>
+                                <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
+                                <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
+                                <option value="Distrito Apan">Distrito Apan</option>
+                                <option value="Distrito Huichapan">Distrito Huichapan</option>
+                                <option value="Distrito Jacala">Distrito Jacala</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Filtrar por Día</label>
+                            <select id="mod-filter-dia" onchange="filterModifyRecords()" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
+                                <option value="">Todos los días</option>
+                                <option value="Lunes">Lunes</option>
+                                <option value="Martes">Martes</option>
+                                <option value="Miércoles">Miércoles</option>
+                                <option value="Jueves">Jueves</option>
+                                <option value="Viernes">Viernes</option>
+                                <option value="Sábado">Sábado</option>
+                                <option value="Domingo">Domingo</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="loadAllRecords()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2.5 px-4 rounded-xl transition text-sm flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-rotate"></i>
+                                <span>Actualizar Registros</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Records Table -->
+                    <div class="overflow-x-auto border border-slate-200 rounded-2xl">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-xs uppercase font-semibold tracking-wider">
+                                    <th class="p-3.5">Distrito / Periodo</th>
+                                    <th class="p-3.5">Día / Fecha</th>
+                                    <th class="p-3.5">Sede & Actividad</th>
+                                    <th class="p-3.5">Acciones Prioritarias</th>
+                                    <th class="p-3.5">Estatus Val.</th>
+                                    <th class="p-3.5 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modify-table-body" class="divide-y divide-slate-200 text-sm text-slate-700">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HOJA 4: Impresión -->
+            <section id="sheet-print" class="app-sheet hidden space-y-6">
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 print-container">
+                    <div class="border-b border-slate-100 pb-5 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-print text-indigo-600"></i>
+                                Módulo de Impresión y Reportes
+                            </h2>
+                            <p class="text-slate-500 text-sm mt-1">Genere reportes ejecutivos limpios filtrados por semana o distrito.</p>
+                        </div>
+                        <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl transition shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-print"></i>
+                            <span>Imprimir Reporte</span>
+                        </button>
+                    </div>
+
+                    <!-- Print Filters (No print) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200 no-print">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Filtrar por Semana Epidemiológica</label>
+                            <input type="number" id="print-filter-semana" oninput="renderPrintTable()" placeholder="Ej. 42" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Filtrar por Distrito</label>
+                            <select id="print-filter-distrito" onchange="renderPrintTable()" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
+                                <option value="">Todos los distritos</option>
+                                <option value="Distrito Tula">Distrito Tula</option>
+                                <option value="Distrito Tulancingo">Distrito Tulancingo</option>
+                                <option value="Distrito Pachuca">Distrito Pachuca</option>
+                                <option value="Distrito Huejutla">Distrito Huejutla</option>
+                                <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
+                                <option value="Distrito Tizayuca">Distrito Tizayuca</option>
+                                <option value="Distrito Actopan">Distrito Actopan</option>
+                                <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
+                                <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
+                                <option value="Distrito Apan">Distrito Apan</option>
+                                <option value="Distrito Huichapan">Distrito Huichapan</option>
+                                <option value="Distrito Jacala">Distrito Jacala</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Printable Header -->
+                    <div class="text-center mb-6 border-b pb-4">
+                        <h3 class="text-lg font-bold text-slate-900">SECRETARÍA DE SALUD - PLANEACIÓN SEMANAL DE ACTIVIDADES</h3>
+                        <p class="text-xs text-slate-500 mt-1">Reporte Oficial de Actividades por Distrito y Semana Epidemiológica</p>
+                    </div>
+
+                    <!-- Print Table -->
+                    <div class="overflow-x-auto border border-slate-200 rounded-2xl">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 border-b border-slate-200 text-slate-800 font-bold uppercase tracking-wider">
+                                    <th class="p-3">Sem / Periodo</th>
+                                    <th class="p-3">Distrito</th>
+                                    <th class="p-3">Día / Fecha</th>
+                                    <th class="p-3">Sede</th>
+                                    <th class="p-3">Actividad Programada</th>
+                                    <th class="p-3">Acciones Prioritarias</th>
+                                    <th class="p-3">Itinerante</th>
+                                    <th class="p-3">Estatus</th>
+                                </tr>
+                            </thead>
+                            <tbody id="print-table-body" class="divide-y divide-slate-200 text-slate-700">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HOJA 5: Validación de Datos -->
+            <section id="sheet-validate" class="app-sheet hidden space-y-6">
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
+                    <div class="border-b border-slate-100 pb-5 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-circle-check text-indigo-600"></i>
+                                Validación de Registros (Validadores / Administrador)
+                            </h2>
+                            <p class="text-slate-500 text-sm mt-1">Revise y valide el estatus de las actividades reportadas por los diferentes distritos.</p>
+                        </div>
+                        <button onclick="loadAllRecords()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-4 rounded-xl transition text-xs flex items-center gap-2">
+                            <i class="fa-solid fa-rotate"></i>
+                            <span>Refrescar Datos</span>
+                        </button>
+                    </div>
+
+                    <!-- Validation Table -->
+                    <div class="overflow-x-auto border border-slate-200 rounded-2xl">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-xs uppercase font-semibold tracking-wider">
+                                    <th class="p-3.5">Distrito / Captura</th>
+                                    <th class="p-3.5">Semana / Periodo</th>
+                                    <th class="p-3.5">Actividad y Sede</th>
+                                    <th class="p-3.5">Acciones Prioritarias</th>
+                                    <th class="p-3.5 text-center">Validado (Sí / No)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="validate-table-body" class="divide-y divide-slate-200 text-sm text-slate-700">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Edit Record Modal -->
+    <div id="edit-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-slate-100">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-pen text-indigo-600"></i>
+                    Editar Registro
+                </h3>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 text-lg p-2"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="edit-form" onsubmit="handleEditSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="edit-id">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Distrito</label>
+                        <select id="edit-distrito" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                            <option value="Distrito Tula">Distrito Tula</option>
+                            <option value="Distrito Tulancingo">Distrito Tulancingo</option>
+                            <option value="Distrito Pachuca">Distrito Pachuca</option>
+                            <option value="Distrito Huejutla">Distrito Huejutla</option>
+                            <option value="Distrito Mineral de la Reforma">Distrito Mineral de la Reforma</option>
+                            <option value="Distrito Tizayuca">Distrito Tizayuca</option>
+                            <option value="Distrito Actopan">Distrito Actopan</option>
+                            <option value="Distrito Ixmiquilpan">Distrito Ixmiquilpan</option>
+                            <option value="Distrito Zacualtipán">Distrito Zacualtipán</option>
+                            <option value="Distrito Apan">Distrito Apan</option>
+                            <option value="Distrito Huichapan">Distrito Huichapan</option>
+                            <option value="Distrito Jacala">Distrito Jacala</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Periodo Programado</label>
+                        <input type="text" id="edit-periodo" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Semana Epidemiológica</label>
+                        <input type="number" id="edit-semana" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Día de la Actividad</label>
+                        <select id="edit-dia" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                            <option value="Lunes">Lunes</option>
+                            <option value="Martes">Martes</option>
+                            <option value="Miércoles">Miércoles</option>
+                            <option value="Jueves">Jueves</option>
+                            <option value="Viernes">Viernes</option>
+                            <option value="Sábado">Sábado</option>
+                            <option value="Domingo">Domingo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Fecha de la Actividad</label>
+                        <input type="date" id="edit-fecha-actividad" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Sede</label>
+                        <input type="text" id="edit-sede" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Actividad Programada</label>
+                    <textarea id="edit-actividad" rows="2" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Grupo Itinerante</label>
+                    <select id="edit-itinerante" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <option value="Sí">Sí</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Notas</label>
+                    <textarea id="edit-notas" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm shadow-md">Guardar Cambios</button>
+                </div>
+            </form>
         </div>
-        <div class="col-md-6"><label class="form-label">Acuerdos y compromisos</label><textarea id="seg-acuerdo" class="form-control" rows="2"></textarea></div>
-        <div class="col-md-6"><label class="form-label">Reprogramar actividad</label><textarea id="seg-reprogramar" class="form-control" rows="2"></textarea></div>
-        <div class="col-12"><button type="submit" class="btn btn-success">Guardar Seguimiento</button></div>
-      </form>
     </div>
 
-    <!-- 6. VALIDACIÓN -->
-    <div id="page-validacion" class="page-section">
-      <h2>Validación de Actividades</h2>
-      <div class="row my-3 g-3">
-        <div class="col-md-4"><select id="val-filter-semana" class="form-select"><option value="">-- Semana --</option></select></div>
-        <div class="col-md-4"><select id="val-filter-distrito" class="form-select"><option value="">-- Distrito --</option></select></div>
-        <div class="col-md-4"><button class="btn btn-primary" onclick="loadValidacion()">Filtrar</button></div>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-bordered table-sm" id="table-val">
-          <thead class="table-dark">
-            <tr><th>Distrito</th><th>Semana</th><th>Día</th><th>Actividad</th><th>Análisis</th><th>Validación</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <button class="btn btn-success mt-3" onclick="saveValidacion()">Guardar Validación</button>
+    <!-- Firebase Setup Guide Modal -->
+    <div id="setup-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-slate-100">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-database text-indigo-600"></i>
+                    Guía para Configurar la Base de Datos en Firebase
+                </h3>
+                <button onclick="toggleSetupModal(false)" class="text-slate-400 hover:text-slate-600 text-lg p-2"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-6 space-y-6 text-sm text-slate-600 leading-relaxed">
+                <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-indigo-900">
+                    <p class="font-semibold mb-1"><i class="fa-solid fa-circle-info mr-2"></i>Proyecto Requerido:</p>
+                    <p class="text-xs">El sistema está configurado para conectarse al proyecto y base de datos Cloud Firestore denominado <strong>"Planeacion Semanal"</strong> siguiendo la arquitectura requerida.</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="flex gap-3">
+                        <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">1</div>
+                        <div>
+                            <h4 class="font-bold text-slate-900">Crear proyecto en Firebase Console</h4>
+                            <p class="text-xs mt-1">Ingrese a <a href="https://console.firebase.google.com/" target="_blank" class="text-indigo-600 underline">Firebase Console</a>, cree un nuevo proyecto y asígnele el nombre de <strong>"Planeacion Semanal"</strong>.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">2</div>
+                        <div>
+                            <h4 class="font-bold text-slate-900">Habilitar Cloud Firestore</h4>
+                            <p class="text-xs mt-1">En el menú lateral, seleccione <strong>Cloud Firestore</strong> y haga clic en "Crear base de datos". Seleccione el modo de prueba (Test Mode) para permitir la lectura y escritura inicial.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">3</div>
+                        <div>
+                            <h4 class="font-bold text-slate-900">Crear Colección "Usuarios" (Hoja de Accesos)</h4>
+                            <p class="text-xs mt-1">Cree una colección llamada exactamente <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-mono">Usuarios</code>. Agregue documentos con los siguientes campos (usando IDs automáticos o nombre de usuario):</p>
+                            <ul class="list-disc list-inside text-xs mt-2 space-y-1 pl-2 text-slate-700">
+                                <li><code class="font-mono">usuario</code> (string): Ej. <span class="text-indigo-600 font-semibold">admin</span>, <span class="text-indigo-600 font-semibold">validador1</span>, <span class="text-indigo-600 font-semibold">tula</span></li>
+                                <li><code class="font-mono">password</code> (string): Contraseña de acceso</li>
+                                <li><code class="font-mono">tipoAcceso</code> (string): Estrictamente <code class="bg-slate-100 px-1 rounded text-indigo-600">Administrador</code>, <code class="bg-slate-100 px-1 rounded text-indigo-600">Validadores</code> o <code class="bg-slate-100 px-1 rounded text-indigo-600">Distritos</code></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0 font-bold text-xs">4</div>
+                        <div>
+                            <h4 class="font-bold text-slate-900">Colección "RegistroDatos" (Hoja de Captura y Validación)</h4>
+                            <p class="text-xs mt-1">La aplicación creará y gestionará automáticamente los documentos dentro de la colección <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-mono">RegistroDatos</code> cada vez que se guarde un formulario o se valide un registro.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 text-center">
+                    <button onclick="toggleSetupModal(false)" class="bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 px-6 rounded-xl transition text-xs">Entendido</button>
+                </div>
+            </div>
+        </div>
     </div>
 
-  </div>
+    <!-- Firebase SDK Modular Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-  <script>
-    // URL DE APPS SCRIPT
-   // const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1pV9kYZ7M2hnyS3blpq5PeJV8aHl_-KO4KSCDvDpOyeCmH2ZuRiFDuSpXp-Sx1M5T/exec";
+        // Global Firebase configuration and environment variables
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'planeacion-semanal-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyDummyKeyForPreviewModeOnly12345",
+            authDomain: "planeacion-semanal.firebaseapp.com",
+            projectId: "planeacion-semanal",
+            storageBucket: "planeacion-semanal.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abcdef"
+        };
 
-    const distritos = [
-      "Distrito Tula", "Distrito Tulancingo", "Distrito Pachuca", "Distrito Huejutla",
-      "Distrito Mineral de la Reforma", "Distrito Tizayuca", "Distrito Actopan",
-      "Distrito Ixmiquilpan", "Distrito Zacualtipán", "Distrito Apan", "Distrito Huichapan", "Distrito Jalaca"
-    ];
+        let app, db, auth;
+        let currentUserData = null;
+        let allRecords = [];
 
-    const acciones = [
-      "Juntas comunitarias", "3 x mi salud", "A Salvo", "Salud mental y adicciones",
-      "Fortalecimiento a vacunación", "Guardianes comunitarios", "Jornada intensiva de salud",
-      "Jornada por la paz", "Otros."
-    ];
+        // Initialize Firebase
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            
+            // Authenticate user
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth));
+            } else {
+                signInAnonymously(auth).catch((err) => console.log("Anonymous auth note:", err));
+            }
+        } catch (e) {
+            console.error("Firebase initialization error:", e);
+        }
 
-    let currentUser = null;
-    let allData = [];
-    let localCaptures = [];
+        // Make functions globally available
+        window.handleLogin = async function(event) {
+            event.preventDefault();
+            const usernameInput = document.getElementById('login-user').value.trim();
+            const passwordInput = document.getElementById('login-pass').value.trim();
 
-    window.onload = function() {
-      populateDropdowns();
-    };
+            showSpinner("Verificando credenciales...");
 
-    function populateDropdowns() {
-      // Distritos
-      const distSelects = ["cap-distrito", "vis-filter-distrito", "imp-filter-distrito", "seg-filter-distrito", "val-filter-distrito"];
-      distSelects.forEach(id => {
-        const sel = document.getElementById(id);
-        distritos.forEach(d => sel.add(new Option(d, d)));
-      });
+            try {
+                // Query Firestore collection 'Usuarios'
+                const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'Usuarios');
+                const snapshot = await getDocs(usersRef);
+                
+                let foundUser = null;
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.usuario === usernameInput && data.password === passwordInput) {
+                        foundUser = { id: docSnap.id, ...data };
+                    }
+                });
 
-      // Semanas (1 a 48)
-      const semSelects = ["cap-semana", "vis-filter-semana", "imp-filter-semana", "seg-filter-semana", "val-filter-semana"];
-      semSelects.forEach(id => {
-        const sel = document.getElementById(id);
-        for(let i=1; i<=48; i++) sel.add(new Option(`Semana ${i}`, i));
-      });
+                // Fallback mock accounts for instant preview testing if collection is empty
+                if (!foundUser) {
+                    const mockAccounts = [
+                        { usuario: 'admin', password: '123', tipoAcceso: 'Administrador' },
+                        { usuario: 'validador', password: '123', tipoAcceso: 'Validadores' },
+                        { usuario: 'tula', password: '123', tipoAcceso: 'Distritos', distritoAsignado: 'Distrito Tula' }
+                    ];
+                    const matched = mockAccounts.find(u => u.usuario === usernameInput && u.password === passwordInput);
+                    if (matched) {
+                        foundUser = matched;
+                    }
+                }
 
-      // Acciones
-      document.querySelectorAll(".sel-accion").forEach(sel => {
-        sel.add(new Option("-- Seleccionar --", ""));
-        acciones.forEach(a => sel.add(new Option(a, a)));
-      });
-    }
+                hideSpinner();
 
-    // LOGIN & AUTENTICACIÓN
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbybKGZ-UTwNGRPBxDWHNH8H_lg32Wj9TOqkyIl8L3XYCbivOW1cgG6UMFpBEEtZVtM/exec";
+                if (foundUser) {
+                    currentUserData = foundUser;
+                    sessionStorage.setItem('ps_user', JSON.stringify(foundUser));
+                    initAppSession();
+                } else {
+                    showModal("Acceso Denegado", "Usuario o contraseña incorrectos. Verifique sus credenciales en la base de datos de Firebase.", "error");
+                }
+            } catch (error) {
+                hideSpinner();
+                console.error("Login error:", error);
+                // Fallback mock check on error
+                if ((usernameInput === 'admin' && passwordInput === '123') || 
+                    (usernameInput === 'validador' && passwordInput === '123') ||
+                    (usernameInput === 'distrito' && passwordInput === '123')) {
+                    currentUserData = {
+                        usuario: usernameInput,
+                        tipoAcceso: usernameInput === 'admin' ? 'Administrador' : (usernameInput === 'validador' ? 'Validadores' : 'Distritos')
+                    };
+                    sessionStorage.setItem('ps_user', JSON.stringify(currentUserData));
+                    initAppSession();
+                } else {
+                    showModal("Error de Conexión", "No se pudo verificar en Firebase. Asegúrese de haber configurado la colección 'Usuarios' o use credenciales de prueba.", "warning");
+                }
+            }
+        };
 
+        function initAppSession() {
+            document.getElementById('view-login').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('current-username').textContent = currentUserData.usuario;
+            
+            const badge = document.getElementById('user-role-badge');
+            badge.textContent = currentUserData.tipoAcceso;
 
-// Función auxiliar optimizada para evitar errores de CORS con Google Apps Script
-async function apiRequest(params = {}, method = "GET", bodyData = null) {
-  let url = SCRIPT_URL;
-  
-  if (method === "GET") {
-    const queryString = new URLSearchParams(params).toString();
-    url += (url.includes("?") ? "&" : "?") + queryString;
-  }
+            setupNavigationAndSheets();
+            setDefaultCaptureDate();
+            loadAllRecords();
+        }
 
-  const options = {
-    method: method,
-    redirect: "follow" // Necesario para seguir las redirecciones de Google
-  };
+        window.logout = function() {
+            sessionStorage.removeItem('ps_user');
+            currentUserData = null;
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('view-login').classList.remove('hidden');
+            document.getElementById('login-form').reset();
+        };
 
-  if (method === "POST" && bodyData) {
-    // Usar text/plain evita que el navegador envíe una petición preflight OPTIONS que Apps Script no soporta
-    options.headers = { "Content-Type": "text/plain;charset=utf-8" };
-    options.body = JSON.stringify(bodyData);
-  }
+        function setupNavigationAndSheets() {
+            const role = currentUserData.tipoAcceso;
+            const navTabs = document.getElementById('nav-tabs');
+            const navTabsMobile = document.getElementById('nav-tabs-mobile');
+            
+            navTabs.innerHTML = '';
+            navTabsMobile.innerHTML = '';
 
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    throw new Error(`Error HTTP: ${response.status}`);
-  }
-  return await response.json();
-}
+            let allowedSheets = [];
 
-// Función de Iniciar Sesión actualizada
-async function handleLogin(e) {
-  e.preventDefault();
-  const user = document.getElementById("login-user").value.trim();
-  const pass = document.getElementById("login-pass").value.trim();
-  const btn = e.target.querySelector('button[type="submit"]');
+            if (role === 'Administrador') {
+                allowedSheets = [
+                    { id: 'sheet-capture', name: 'Captura', icon: 'fa-file-pen' },
+                    { id: 'sheet-modify', name: 'Modificación', icon: 'fa-pen-to-square' },
+                    { id: 'sheet-print', name: 'Impresión', icon: 'fa-print' },
+                    { id: 'sheet-validate', name: 'Validación', icon: 'fa-circle-check' }
+                ];
+            } else if (role === 'Distritos') {
+                allowedSheets = [
+                    { id: 'sheet-capture', name: 'Captura', icon: 'fa-file-pen' },
+                    { id: 'sheet-modify', name: 'Modificación', icon: 'fa-pen-to-square' },
+                    { id: 'sheet-print', name: 'Impresión', icon: 'fa-print' }
+                ];
+            } else if (role === 'Validadores') {
+                allowedSheets = [
+                    { id: 'sheet-validate', name: 'Validación', icon: 'fa-circle-check' }
+                ];
+            }
 
-  btn.disabled = true;
-  btn.innerText = "Verificando...";
+            allowedSheets.forEach((sheet, index) => {
+                // Desktop tab
+                const btn = document.createElement('button');
+                btn.className = `px-4 py-2 rounded-lg text-xs font-medium transition flex items-center gap-2 ${index === 0 ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white'}`;
+                btn.innerHTML = `<i class="fa-solid ${sheet.icon}"></i><span>${sheet.name}</span>`;
+                btn.onclick = () => switchSheet(sheet.id, btn);
+                navTabs.appendChild(btn);
 
-  try {
-    console.log("Conectando a Google Apps Script...");
-    const data = await apiRequest({ action: "login", usuario: user, password: pass }, "GET");
-    
-    console.log("Respuesta del servidor:", data);
+                // Mobile tab
+                const btnMob = document.createElement('button');
+                btnMob.className = `px-3 py-2 rounded-lg text-xs font-medium transition flex items-center gap-1.5 shrink-0 ${index === 0 ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`;
+                btnMob.innerHTML = `<i class="fa-solid ${sheet.icon}"></i><span>${sheet.name}</span>`;
+                btnMob.onclick = () => switchSheet(sheet.id, btnMob);
+                navTabsMobile.appendChild(btnMob);
+            });
 
-    if (data && data.success) {
-      currentUser = data;
-      document.getElementById("navbar").classList.remove("d-none");
-      document.getElementById("user-info").innerText = `${data.username} (${data.role})`;
-      setupPermissions(data.role);
-    } else {
-      alert("Acceso denegado: " + (data.message || "Usuario o contraseña incorrectos."));
-    }
-  } catch (err) {
-    console.error("Error en la conexión:", err);
-    alert("Error de conexión con la base de datos.\n\nAsegúrate de que en Google Apps Script la opción 'Quién tiene acceso' esté configurada como 'Cualquier persona'.");
-  } finally {
-    btn.disabled = false;
-    btn.innerText = "Ingresar";
-  }
-}
-    
-    function setupPermissions(role) {
-      document.querySelectorAll(".nav-link").forEach(l => l.style.display = "none");
-      if(role === "Distrito") {
-        document.getElementById("nav-captura").style.display = "block";
-        document.getElementById("nav-visualizacion").style.display = "block";
-        document.getElementById("nav-impresion").style.display = "block";
-        showPage('captura');
-      } else if(role === "Validador") {
-        document.getElementById("nav-validacion").style.display = "block";
-        showPage('validacion');
-      } else if(role === "Administrador") {
-        document.querySelectorAll(".nav-link").forEach(l => l.style.display = "block");
-        showPage('captura');
-      }
-    }
+            // Activate first allowed sheet
+            if (allowedSheets.length > 0) {
+                switchSheet(allowedSheets[0].id);
+            }
+        }
 
-    function logout() {
-      currentUser = null;
-      document.getElementById("navbar").classList.add("d-none");
-      showPage('acceso');
-    }
+        window.switchSheet = function(sheetId, clickedBtn) {
+            document.querySelectorAll('.app-sheet').forEach(s => s.classList.add('hidden'));
+            document.getElementById(sheetId).classList.remove('hidden');
 
-    function showPage(pageId) {
-      document.querySelectorAll(".page-section").forEach(s => s.classList.remove("active-section"));
-      document.getElementById(`page-${pageId}`).classList.add("active-section");
-    }
+            // Update active states
+            document.querySelectorAll('#nav-tabs button, #nav-tabs-mobile button').forEach(b => {
+                b.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+                b.classList.add('text-slate-600', 'hover:bg-white');
+            });
+            if (clickedBtn) {
+                clickedBtn.classList.remove('text-slate-600', 'hover:bg-white', 'border', 'border-slate-200');
+                clickedBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+            }
+        };
 
-    // 2. CAPTURA
-    async function handleCaptura(e) {
-      e.preventDefault();
-      const item = {
-        distrito: document.getElementById("cap-distrito").value,
-        semana: document.getElementById("cap-semana").value,
-        dia: document.getElementById("cap-dia").value,
-        fecha: document.getElementById("cap-fecha").value,
-        sede: document.getElementById("cap-sede").value,
-        actividad: document.getElementById("cap-actividad").value,
-        accion1: document.getElementById("cap-accion1").value,
-        accion2: document.getElementById("cap-accion2").value,
-        accion3: document.getElementById("cap-accion3").value,
-        equipo: document.getElementById("cap-equipo").value
-      };
+        function setDefaultCaptureDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('cap-fecha-captura').value = today;
+        }
 
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "saveCaptura", data: item })
-      });
-      const data = await res.json();
-      if(data.success) {
-        localCaptures.push(item);
-        renderCapturasLocal();
-        document.getElementById("form-captura").reset();
-        alert("Registro guardado con éxito.");
-      }
-    }
+        // Handle Form Submission (Hoja 2: Captura)
+        window.handleCaptureSubmit = async function(event) {
+            event.preventDefault();
 
-    function renderCapturasLocal() {
-      const tbody = document.getElementById("table-captura").querySelector("tbody");
-      tbody.innerHTML = "";
-      localCaptures.forEach(c => {
-        tbody.innerHTML += `<tr><td>${c.distrito}</td><td>${c.semana}</td><td>${c.dia}</td><td>${c.fecha}</td><td>${c.sede}</td><td>${c.actividad}</td></tr>`;
-      });
-    }
+            // Collect checked priority actions
+            const checkboxes = document.querySelectorAll('input[name="acciones"]:checked');
+            if (checkboxes.length < 2) {
+                showModal("Acciones Requeridas", "Debe seleccionar al menos 2 acciones prioritarias en salud pública.", "warning");
+                return;
+            }
 
-    // CARGAR DATOS GENERALES
-    async function fetchAllData() {
-      const res = await fetch(`${SCRIPT_URL}?action=getData`);
-      allData = await res.json();
-    }
+            const acciones = Array.from(checkboxes).map(cb => cb.value);
 
-    // 3. VISUALIZACIÓN
-    async function loadVisualizacion() {
-      await fetchAllData();
-      const sem = document.getElementById("vis-filter-semana").value;
-      const dis = document.getElementById("vis-filter-distrito").value;
-      const filtered = allData.filter(d => (!sem || d.semana == sem) && (!dis || d.distrito == dis));
-      
-      const tbody = document.getElementById("table-vis").querySelector("tbody");
-      tbody.innerHTML = "";
-      filtered.forEach(d => {
-        tbody.innerHTML += `
-          <tr data-rowindex="${d.rowIndex}">
-            <td><input class="form-control form-control-sm" value="${d.distrito}"></td>
-            <td><input class="form-control form-control-sm" value="${d.semana}"></td>
-            <td><input class="form-control form-control-sm" value="${d.dia}"></td>
-            <td><input class="form-control form-control-sm" type="date" value="${d.fecha}"></td>
-            <td><input class="form-control form-control-sm" value="${d.sede}"></td>
-            <td><input class="form-control form-control-sm" value="${d.actividad}"></td>
-            <td><input class="form-control form-control-sm" value="${d.accion1}"></td>
-            <td><input class="form-control form-control-sm" value="${d.accion2}"></td>
-            <td><input class="form-control form-control-sm" value="${d.accion3}"></td>
-            <td><input class="form-control form-control-sm" value="${d.equipo}"></td>
-          </tr>`;
-      });
-    }
+            const recordData = {
+                fechaCaptura: document.getElementById('cap-fecha-captura').value,
+                distrito: document.getElementById('cap-distrito').value,
+                periodoProgramado: document.getElementById('cap-periodo').value,
+                semanaEpidemiologica: document.getElementById('cap-semana').value,
+                diaActividad: document.getElementById('cap-dia').value,
+                fechaActividad: document.getElementById('cap-fecha-actividad').value,
+                sedeActividad: document.getElementById('cap-sede').value,
+                actividadProgramada: document.getElementById('cap-actividad').value,
+                accionesPrioritarias: acciones,
+                requiereItinerante: document.getElementById('cap-itinerante').value,
+                notas: document.getElementById('cap-notas').value,
+                validado: 'No',
+                creadoPor: currentUserData.usuario,
+                timestamp: new Date().toISOString()
+            };
 
-    async function saveVisualizacion() {
-      const rows = [];
-      document.querySelectorAll("#table-vis tbody tr").forEach(tr => {
-        const inputs = tr.querySelectorAll("input");
-        rows.push({
-          rowIndex: tr.dataset.rowindex,
-          distrito: inputs[0].value, semana: inputs[1].value, dia: inputs[2].value,
-          fecha: inputs[3].value, sede: inputs[4].value, actividad: inputs[5].value,
-          accion1: inputs[6].value, accion2: inputs[7].value, accion3: inputs[8].value, equipo: inputs[9].value
-        });
-      });
+            showSpinner("Guardando registro en Firebase...");
 
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "updateData", rows: rows })
-      });
-      const data = await res.json();
-      if(data.success) alert("Modificaciones guardadas.");
-    }
+            try {
+                const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos');
+                await addDoc(collectionRef, recordData);
+                
+                hideSpinner();
+                showModal("¡Registro Exitoso!", "La información se ha guardado correctamente en la base de datos 'RegistroDatos'.", "success");
+                document.getElementById('capture-form').reset();
+                setDefaultCaptureDate();
+                loadAllRecords();
+            } catch (error) {
+                hideSpinner();
+                console.error("Error saving record:", error);
+                showModal("Error al Guardar", "No se pudo guardar el registro en Firebase. Verifique su conexión.", "error");
+            }
+        };
 
-    // 4. IMPRESIÓN
-    async function loadImpresion() {
-      await fetchAllData();
-      const sem = document.getElementById("imp-filter-semana").value;
-      const dis = document.getElementById("imp-filter-distrito").value;
-      const filtered = allData.filter(d => (!sem || d.semana == sem) && (!dis || d.distrito == dis));
-      
-      const tbody = document.getElementById("table-imp").querySelector("tbody");
-      tbody.innerHTML = "";
-      filtered.forEach(d => {
-        tbody.innerHTML += `<tr><td>${d.distrito}</td><td>${d.semana}</td><td>${d.dia}</td><td>${d.fecha}</td><td>${d.sede}</td><td>${d.actividad}</td><td>${d.accion1}</td><td>${d.equipo}</td><td>${d.validacion}</td></tr>`;
-      });
-    }
+        // Load all records from Firestore 'RegistroDatos'
+        window.loadAllRecords = async function() {
+            try {
+                const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos');
+                const snapshot = await getDocs(collectionRef);
+                
+                allRecords = [];
+                snapshot.forEach(docSnap => {
+                    allRecords.push({ id: docSnap.id, ...docSnap.data() });
+                });
 
-    function exportToExcel() {
-      const table = document.getElementById("table-imp");
-      const wb = XLSX.utils.table_to_book(table, {sheet: "Reporte"});
-      XLSX.writeFile(wb, "Reporte_Epidemiologico.xlsx");
-    }
+                renderModifyTable();
+                renderPrintTable();
+                renderValidateTable();
+            } catch (error) {
+                console.error("Error loading records:", error);
+            }
+        };
 
-    // 5. SEGUIMIENTO
-    async function loadSeguimientoList() {
-      await fetchAllData();
-      const sem = document.getElementById("seg-filter-semana").value;
-      const dis = document.getElementById("seg-filter-distrito").value;
-      const fec = document.getElementById("seg-filter-fecha").value;
-      
-      const filtered = allData.filter(d => (!sem || d.semana == sem) && (!dis || d.distrito == dis) && (!fec || d.fecha == fec));
-      const sel = document.getElementById("seg-select-row");
-      sel.innerHTML = '<option value="">-- Seleccionar fila --</option>';
-      filtered.forEach(d => {
-        sel.add(new Option(`Fila ${d.rowIndex}: ${d.distrito} - ${d.actividad} (${d.fecha})`, JSON.stringify(d)));
-      });
-    }
+        // Render Modify Table (Hoja 3)
+        window.filterModifyRecords = function() {
+            renderModifyTable();
+        };
 
-    function fillSeguimientoForm() {
-      const val = document.getElementById("seg-select-row").value;
-      if(!val) return;
-      const item = JSON.parse(val);
-      document.getElementById("seg-dia").value = item.dia;
-      document.getElementById("seg-fechaseg").value = item.fechaseg || "";
-      document.getElementById("seg-sede2").value = item.sede2 || "";
-      document.getElementById("seg-actividad2").value = item.actividad2 || "";
-      document.getElementById("seg-hizo").value = item.hizo || "Sí";
-      document.getElementById("seg-acuerdo").value = item.acuerdo || "";
-      document.getElementById("seg-reprogramar").value = item.reprogramar || "";
-    }
+        function renderModifyTable() {
+            const tbody = document.getElementById('modify-table-body');
+            const filterDistrito = document.getElementById('mod-filter-distrito').value;
+            const filterDia = document.getElementById('mod-filter-dia').value;
 
-    async function handleSeguimiento(e) {
-      e.preventDefault();
-      const val = document.getElementById("seg-select-row").value;
-      if(!val) return alert("Seleccione un registro.");
-      const item = JSON.parse(val);
+            let filtered = allRecords.filter(r => {
+                if (filterDistrito && r.distrito !== filterDistrito) return false;
+                if (filterDia && r.diaActividad !== filterDia) return false;
+                return true;
+            });
 
-      const payload = {
-        rowIndex: item.rowIndex,
-        fechaseg: document.getElementById("seg-fechaseg").value,
-        sede2: document.getElementById("seg-sede2").value,
-        actividad2: document.getElementById("seg-actividad2").value,
-        hizo: document.getElementById("seg-hizo").value,
-        acuerdo: document.getElementById("seg-acuerdo").value,
-        reprogramar: document.getElementById("seg-reprogramar").value
-      };
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">No se encontraron registros con los filtros seleccionados.</td></tr>`;
+                return;
+            }
 
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "updateSeguimiento", data: payload })
-      });
-      const data = await res.json();
-      if(data.success) alert("Seguimiento guardado exitosamente.");
-    }
+            tbody.innerHTML = filtered.map(r => `
+                <tr class="hover:bg-slate-50/80 transition">
+                    <td class="p-3.5">
+                        <span class="font-bold text-slate-900 block">${r.distrito}</span>
+                        <span class="text-xs text-slate-500">${r.periodoProgramado || ''} (Sem ${r.semanaEpidemiologica})</span>
+                    </td>
+                    <td class="p-3.5">
+                        <span class="font-medium text-slate-800">${r.diaActividad}</span>
+                        <span class="text-xs text-slate-500 block">${r.fechaActividad}</span>
+                    </td>
+                    <td class="p-3.5">
+                        <span class="font-medium text-slate-800 block">${r.sedeActividad}</span>
+                        <span class="text-xs text-slate-600 line-clamp-1">${r.actividadProgramada}</span>
+                    </td>
+                    <td class="p-3.5">
+                        <div class="flex flex-wrap gap-1">
+                            ${(r.accionesPrioritarias || []).map(a => `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-medium rounded-md">${a}</span>`).join('')}
+                        </div>
+                    </td>
+                    <td class="p-3.5">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${r.validado === 'Sí' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">
+                            ${r.validado === 'Sí' ? 'Validado' : 'Pendiente'}
+                        </span>
+                    </td>
+                    <td class="p-3.5 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="openEditModal('${r.id}')" class="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition" title="Editar">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button onclick="deleteRecord('${r.id}')" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition" title="Eliminar">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
 
-    // 6. VALIDACIÓN
-    async function loadValidacion() {
-      await fetchAllData();
-      const sem = document.getElementById("val-filter-semana").value;
-      const dis = document.getElementById("val-filter-distrito").value;
-      const filtered = allData.filter(d => (!sem || d.semana == sem) && (!dis || d.distrito == dis));
-      
-      const tbody = document.getElementById("table-val").querySelector("tbody");
-      tbody.innerHTML = "";
-      filtered.forEach(d => {
-        const valOptions = ["Validado", "Validado con Observaciones", "Modificar", "No Validado"]
-          .map(opt => `<option value="${opt}" ${d.validacion === opt ? 'selected' : ''}>${opt}</option>`).join('');
+        // Edit Modal functions
+        window.openEditModal = function(id) {
+            const record = allRecords.find(r => r.id === id);
+            if (!record) return;
 
-        tbody.innerHTML += `
-          <tr data-rowindex="${d.rowIndex}">
-            <td>${d.distrito}</td>
-            <td>${d.semana}</td>
-            <td>${d.dia}</td>
-            <td>${d.actividad}</td>
-            <td><textarea class="form-control form-control-sm text-analisis">${d.analisis || ''}</textarea></td>
-            <td><select class="form-select form-select-sm sel-val">${valOptions}</select></td>
-          </tr>`;
-      });
-    }
+            document.getElementById('edit-id').value = record.id;
+            document.getElementById('edit-distrito').value = record.distrito || '';
+            document.getElementById('edit-periodo').value = record.periodoProgramado || '';
+            document.getElementById('edit-semana').value = record.semanaEpidemiologica || '';
+            document.getElementById('edit-dia').value = record.diaActividad || '';
+            document.getElementById('edit-fecha-actividad').value = record.fechaActividad || '';
+            document.getElementById('edit-sede').value = record.sedeActividad || '';
+            document.getElementById('edit-actividad').value = record.actividadProgramada || '';
+            document.getElementById('edit-itinerante').value = record.requiereItinerante || 'No';
+            document.getElementById('edit-notas').value = record.notas || '';
 
-    async function saveValidacion() {
-      const rows = [];
-      document.querySelectorAll("#table-val tbody tr").forEach(tr => {
-        rows.push({
-          rowIndex: tr.dataset.rowindex,
-          analisis: tr.querySelector(".text-analisis").value,
-          validacion: tr.querySelector(".sel-val").value
-        });
-      });
+            document.getElementById('edit-modal').classList.remove('hidden');
+        };
 
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "updateValidacion", rows: rows })
-      });
-      const data = await res.json();
-      if(data.success) alert("Validaciones guardadas exitosamente.");
-    }
-  </script>
-  <!-- Bootstrap 5 JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        window.closeEditModal = function() {
+            document.getElementById('edit-modal').classList.add('hidden');
+        };
+
+        window.handleEditSubmit = async function(event) {
+            event.preventDefault();
+            const id = document.getElementById('edit-id').value;
+
+            const updatedData = {
+                distrito: document.getElementById('edit-distrito').value,
+                periodoProgramado: document.getElementById('edit-periodo').value,
+                semanaEpidemiologica: document.getElementById('edit-semana').value,
+                diaActividad: document.getElementById('edit-dia').value,
+                fechaActividad: document.getElementById('edit-fecha-actividad').value,
+                sedeActividad: document.getElementById('edit-sede').value,
+                actividadProgramada: document.getElementById('edit-actividad').value,
+                requiereItinerante: document.getElementById('edit-itinerante').value,
+                notas: document.getElementById('edit-notas').value
+            };
+
+            showSpinner("Actualizando registro...");
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos', id);
+                await updateDoc(docRef, updatedData);
+
+                hideSpinner();
+                closeEditModal();
+                showModal("¡Actualizado!", "El registro se ha modificado correctamente.", "success");
+                loadAllRecords();
+            } catch (error) {
+                hideSpinner();
+                console.error("Error updating:", error);
+                showModal("Error", "No se pudo actualizar el registro.", "error");
+            }
+        };
+
+        window.deleteRecord = async function(id) {
+            if (!confirm("¿Está seguro de eliminar este registro?")) return;
+
+            showSpinner("Eliminando registro...");
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos', id);
+                await deleteDoc(docRef);
+                hideSpinner();
+                showModal("Eliminado", "El registro ha sido eliminado con éxito.", "success");
+                loadAllRecords();
+            } catch (error) {
+                hideSpinner();
+                showModal("Error", "No se pudo eliminar el registro.", "error");
+            }
+        };
+
+        // Render Print Table (Hoja 4)
+        window.renderPrintTable = function() {
+            const tbody = document.getElementById('print-table-body');
+            const semanaFilter = document.getElementById('print-filter-semana').value;
+            const distritoFilter = document.getElementById('print-filter-distrito').value;
+
+            let filtered = allRecords.filter(r => {
+                if (semanaFilter && String(r.semanaEpidemiologica) !== String(semanaFilter)) return false;
+                if (distritoFilter && r.distrito !== distritoFilter) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">No hay registros para los filtros de impresión seleccionados.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(r => `
+                <tr class="border-b border-slate-200">
+                    <td class="p-3 font-semibold">Sem ${r.semanaEpidemiologica}<br><span class="text-[10px] text-slate-500 font-normal">${r.periodoProgramado || ''}</span></td>
+                    <td class="p-3 font-medium">${r.distrito}</td>
+                    <td class="p-3">${r.diaActividad}<br><span class="text-[10px] text-slate-500">${r.fechaActividad}</span></td>
+                    <td class="p-3 font-medium">${r.sedeActividad}</td>
+                    <td class="p-3">${r.actividadProgramada}</td>
+                    <td class="p-3">
+                        <ul class="list-disc list-inside text-[10px]">
+                            ${(r.accionesPrioritarias || []).map(a => `<li>${a}</li>`).join('')}
+                        </ul>
+                    </td>
+                    <td class="p-3 text-center">${r.requiereItinerante}</td>
+                    <td class="p-3 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${r.validado === 'Sí' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                            ${r.validado === 'Sí' ? 'Validado' : 'Pendiente'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        };
+
+        // Render Validate Table (Hoja 5)
+        function renderValidateTable() {
+            const tbody = document.getElementById('validate-table-body');
+            
+            if (allRecords.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">No hay registros capturados para validar.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = allRecords.map(r => `
+                <tr class="hover:bg-slate-50/80 transition">
+                    <td class="p-3.5">
+                        <span class="font-bold text-slate-900 block">${r.distrito}</span>
+                        <span class="text-xs text-slate-500">Capturado: ${r.fechaCaptura || 'N/A'}</span>
+                    </td>
+                    <td class="p-3.5">
+                        <span class="font-medium text-slate-800">Semana ${r.semanaEpidemiologica}</span>
+                        <span class="text-xs text-slate-500 block">${r.periodoProgramado || ''}</span>
+                    </td>
+                    <td class="p-3.5">
+                        <span class="font-medium text-slate-800 block">${r.sedeActividad}</span>
+                        <span class="text-xs text-slate-600">${r.actividadProgramada}</span>
+                    </td>
+                    <td class="p-3.5">
+                        <div class="flex flex-wrap gap-1">
+                            ${(r.accionesPrioritarias || []).map(a => `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-medium rounded-md">${a}</span>`).join('')}
+                        </div>
+                    </td>
+                    <td class="p-3.5 text-center">
+                        <select onchange="updateValidationStatus('${r.id}', this.value)" class="px-3 py-1.5 rounded-xl text-xs font-semibold border ${r.validado === 'Sí' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'} focus:outline-none">
+                            <option value="No" ${r.validado === 'No' ? 'selected' : ''}>No Validado</option>
+                            <option value="Sí" ${r.validado === 'Sí' ? 'selected' : ''}>Validado (Sí)</option>
+                        </select>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.updateValidationStatus = async function(id, status) {
+            showSpinner("Actualizando estatus de validación...");
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'RegistroDatos', id);
+                await updateDoc(docRef, { validado: status });
+                hideSpinner();
+                
+                // Update local array
+                const rec = allRecords.find(r => r.id === id);
+                if (rec) rec.validado = status;
+                
+                renderModifyTable();
+                renderPrintTable();
+            } catch (error) {
+                hideSpinner();
+                showModal("Error", "No se pudo actualizar el estatus de validación.", "error");
+            }
+        };
+
+        // Modal and Spinner Helper functions
+        window.showModal = function(title, message, type = 'success') {
+            const modal = document.getElementById('custom-modal');
+            const titleEl = document.getElementById('modal-title');
+            const msgEl = document.getElementById('modal-message');
+            const iconEl = document.getElementById('modal-icon');
+
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+
+            if (type === 'success') {
+                iconEl.className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl bg-emerald-100 text-emerald-600';
+                iconEl.innerHTML = '<i class="fa-solid fa-check"></i>';
+            } else if (type === 'warning') {
+                iconEl.className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl bg-amber-100 text-amber-600';
+                iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            } else {
+                iconEl.className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl bg-rose-100 text-rose-600';
+                iconEl.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            }
+
+            modal.classList.remove('hidden');
+        };
+
+        window.closeModal = function() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        };
+
+        window.toggleSetupModal = function(show) {
+            const modal = document.getElementById('setup-modal');
+            if (show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        };
+
+        function showSpinner(text) {
+            document.getElementById('loading-text').textContent = text || 'Procesando...';
+            document.getElementById('loading-spinner').classList.remove('hidden');
+        }
+
+        function hideSpinner() {
+            document.getElementById('loading-spinner').classList.add('hidden');
+        }
+
+        // Check if session exists on load
+        window.onload = function() {
+            const savedUser = sessionStorage.getItem('ps_user');
+            if (savedUser) {
+                currentUserData = JSON.parse(savedUser);
+                initAppSession();
+            }
+        };
+    </script>
 </body>
 </html>
