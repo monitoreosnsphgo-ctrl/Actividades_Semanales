@@ -11,7 +11,7 @@
     <!-- SheetJS (xlsx) para exportación a Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
-    <!-- Firebase SDK Compat (v10) -->
+    <!-- Firebase SDK Compat (v10) - Esencial para archivos HTML únicos -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
@@ -22,10 +22,8 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
 
-    <!-- CONFIGURACIÓN DE FIREBASE -->
+    <!-- CONFIGURACIÓN OFICIAL DE FIREBASE -->
     <script>
-import { initializeApp } from "firebase/app";
-        // Reemplaza con los datos de tu proyecto en Firebase Console
         const firebaseConfig = {
             apiKey: "AIzaSyAYMuQZmL9Ale3SiLf-54HCR2sq7BuNadk",
             authDomain: "planeacion-semanal.firebaseapp.com",
@@ -34,14 +32,10 @@ import { initializeApp } from "firebase/app";
             messagingSenderId: "241332209963",
             appId: "1:241332209963:web:4085089da522d678611d6e"
         };
-const app = initializeApp(firebaseConfig);
+
         // Inicializar Firebase de forma segura
         if (!firebase.apps.length) {
-            try {
-                firebase.initializeApp(firebaseConfig);
-            } catch (e) {
-                console.warn("Firebase no inicializado con configuración predeterminada.");
-            }
+            firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
     </script>
@@ -571,7 +565,7 @@ const app = initializeApp(firebaseConfig);
                 statusEl.className = "text-xs text-emerald-600 font-semibold mt-1";
             } catch (error) {
                 console.error("Error al inicializar usuarios:", error);
-                statusEl.textContent = "Error al conectar con Firestore. Verifique sus credenciales en el script.";
+                statusEl.textContent = "Error al conectar con Firestore. Verifique sus reglas de seguridad en la consola.";
                 statusEl.className = "text-xs text-red-600 font-semibold mt-1";
             }
         }
@@ -585,14 +579,12 @@ const app = initializeApp(firebaseConfig);
             let authenticatedUser = null;
 
             try {
-                if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_KEY") {
-                    const docRef = await db.collection('Usuarios').doc(uInput).get();
-                    if (docRef.exists) {
-                        const userData = docRef.data();
-                        const storedPass = userData.pass || userData.password;
-                        if (storedPass === pInput) {
-                            authenticatedUser = userData;
-                        }
+                const docRef = await db.collection('Usuarios').doc(uInput).get();
+                if (docRef.exists) {
+                    const userData = docRef.data();
+                    const storedPass = userData.pass || userData.password;
+                    if (storedPass === pInput) {
+                        authenticatedUser = userData;
                     }
                 }
             } catch (err) {
@@ -608,7 +600,7 @@ const app = initializeApp(firebaseConfig);
             if (authenticatedUser) {
                 setSession(authenticatedUser);
             } else {
-                alert("Usuario o contraseña incorrectos. Verifique sus datos.");
+                alert("Usuario o contraseña incorrectos. Si es su primer ingreso, haga clic en 'Inicializar Usuarios Predeterminados'.");
             }
         }
 
@@ -722,7 +714,7 @@ const app = initializeApp(firebaseConfig);
                 }
             } catch (error) {
                 console.error("Error al guardar en Firebase:", error);
-                alert("Error al guardar los datos. Verifique su conexión.");
+                alert("Error al guardar los datos. Verifique sus reglas de Firestore.");
             }
         }
 
@@ -771,7 +763,7 @@ const app = initializeApp(firebaseConfig);
                 tbody.innerHTML = html || `<tr><td colspan="7" class="p-6 text-center text-slate-500">Sin permisos o registros disponibles.</td></tr>`;
             } catch (err) {
                 console.error("Error al cargar datos:", err);
-                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">Error al consultar la base de datos.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">Error al consultar la base de datos. Verifique índices de Firestore si aplica.</td></tr>`;
             }
         }
 
@@ -1007,9 +999,3 @@ const app = initializeApp(firebaseConfig);
                 loadValidationData();
             } catch (err) {
                 console.error("Error al guardar nota de coordinación:", err);
-                alert("Error al actualizar la nota en la base de datos.");
-            }
-        }
-    </script>
-</body>
-</html>
