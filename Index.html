@@ -26,14 +26,14 @@
     <script>
         // Reemplaza con los datos de tu proyecto en Firebase Console
         const firebaseConfig = {
-            apiKey: "AIzaSyAYMuQZmL9Ale3SiLf-54HCR2sq7BuNadk",
-            authDomain: "planeacion-semanal.firebaseapp.com",
+            apiKey: "TU_API_KEY",
+            authDomain: "tu-proyecto.firebaseapp.com",
             projectId: "planeacion-semanal",
-            storageBucket: "planeacion-semanal.firebasestorage.app",
-            messagingSenderId: "241332209963",
-            appId: "1:241332209963:web:4085089da522d678611d6e"
+            storageBucket: "tu-proyecto.appspot.com",
+            messagingSenderId: "TU_SENDER_ID",
+            appId: "TU_APP_ID"
         };
-const app = initializeApp(firebaseConfig);
+
         // Inicializar Firebase de forma segura
         if (!firebase.apps.length) {
             try {
@@ -364,11 +364,12 @@ const app = initializeApp(firebaseConfig);
                                 <th class="p-2.5 border">Acciones Prioritarias</th>
                                 <th class="p-2.5 border">Itinerante</th>
                                 <th class="p-2.5 border">Notas</th>
+                                <th class="p-2.5 border">Nota Coordinación</th>
                                 <th class="p-2.5 border">Validación</th>
                             </tr>
                         </thead>
                         <tbody id="printTableBody" class="divide-y">
-                            <tr><td colspan="9" class="p-6 text-center text-slate-400">Sin datos cargados.</td></tr>
+                            <tr><td colspan="10" class="p-6 text-center text-slate-400">Sin datos cargados.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -380,7 +381,7 @@ const app = initializeApp(firebaseConfig);
             <div class="border-b pb-4 mb-6 flex justify-between items-center">
                 <div>
                     <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-check-double text-emerald-700 mr-2"></i>Hoja de Validación de Registros</h2>
-                    <p class="text-xs text-slate-500">Audite y apruebe las actividades capturadas por los distritos sanitarios.</p>
+                    <p class="text-xs text-slate-500">Audite, apruebe actividades y agregue notas de coordinación generales.</p>
                 </div>
                 <button onclick="logout()" class="text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded font-medium"><i class="fa-solid fa-right-from-bracket mr-1"></i> Salir</button>
             </div>
@@ -432,10 +433,10 @@ const app = initializeApp(firebaseConfig);
                             <th class="p-3">Semana</th>
                             <th class="p-3">Distrito</th>
                             <th class="p-3">Día / Fecha</th>
-                            <th class="p-3">Sede</th>
-                            <th class="p-3">Actividad Programada</th>
-                            <th class="p-3">Estatus Actual</th>
-                            <th class="p-3 text-center">Cambiar Estatus</th>
+                            <th class="p-3">Sede / Actividad</th>
+                            <th class="p-3">Nota de Coordinación</th>
+                            <th class="p-3">Estatus</th>
+                            <th class="p-3 text-center">Acciones / Validación</th>
                         </tr>
                     </thead>
                     <tbody id="valTableBody" class="divide-y divide-slate-200">
@@ -447,7 +448,7 @@ const app = initializeApp(firebaseConfig);
 
     </main>
 
-    <!-- MODAL DE EDICIÓN -->
+    <!-- MODAL DE EDICIÓN (HOJA 3) -->
     <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b pb-3 mb-4">
@@ -509,6 +510,27 @@ const app = initializeApp(firebaseConfig);
         </div>
     </div>
 
+    <!-- MODAL DE NOTA DE COORDINACIÓN (HOJA 5) -->
+    <div id="noteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="font-bold text-base text-slate-800"><i class="fa-solid fa-comment-dots text-emerald-700 mr-2"></i>Nota de Coordinación</h3>
+                <button onclick="closeNoteModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="noteForm" onsubmit="saveCoordinationNote(event)" class="space-y-4 text-sm">
+                <input type="hidden" id="noteRecordId">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Observaciones / Anotaciones de Coordinación</label>
+                    <textarea id="noteCoordinationText" rows="4" placeholder="Ingrese notas generales de coordinación..." class="w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"></textarea>
+                </div>
+                <div class="flex justify-end space-x-3 pt-2 border-t">
+                    <button type="button" onclick="closeNoteModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded text-sm font-medium">Cancelar</button>
+                    <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded text-sm font-semibold shadow">Guardar Nota</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- SCRIPT DE LÓGICA Y CONTROL -->
     <script>
         let currentUser = null;
@@ -553,7 +575,7 @@ const app = initializeApp(firebaseConfig);
             }
         }
 
-        // Manejo de Login Robusto (Firestore + Respaldo Local)
+        // Manejo de Login Robusto
         async function handleLogin(e) {
             e.preventDefault();
             const uInput = document.getElementById('loginUser').value.trim().toLowerCase();
@@ -561,7 +583,6 @@ const app = initializeApp(firebaseConfig);
 
             let authenticatedUser = null;
 
-            // 1. Intentar consultar Firestore si está configurado
             try {
                 if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_KEY") {
                     const docRef = await db.collection('Usuarios').doc(uInput).get();
@@ -574,10 +595,9 @@ const app = initializeApp(firebaseConfig);
                     }
                 }
             } catch (err) {
-                console.warn("Firestore no accesible o sin conexión, usando respaldo local.", err);
+                console.warn("Firestore no accesible, usando respaldo local.", err);
             }
 
-            // 2. Si no se autenticó por Firebase, verificar contra usuarios locales
             if (!authenticatedUser) {
                 if (localUsers[uInput] && localUsers[uInput].pass === pInput) {
                     authenticatedUser = localUsers[uInput];
@@ -686,6 +706,7 @@ const app = initializeApp(firebaseConfig);
                 accionesPrioritarias: acciones,
                 itinerante: document.getElementById('capItinerante').value,
                 notas: document.getElementById('capNotas').value,
+                nota_coordinacion: "",
                 estatusValidacion: "Pendiente",
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
@@ -812,7 +833,7 @@ const app = initializeApp(firebaseConfig);
             }
 
             subtitle.textContent = `Reporte correspondiente a la Semana Epidemiológica ${semanaFiltro}` + (distritoFiltro ? ` - ${distritoFiltro}` : '');
-            tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-400">Generando reporte...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400">Generando reporte...</td></tr>`;
 
             try {
                 let query = db.collection('RegistroDatos').where('semana', '==', parseInt(semanaFiltro));
@@ -820,7 +841,7 @@ const app = initializeApp(firebaseConfig);
 
                 const snapshot = await query.get();
                 if (snapshot.empty) {
-                    tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-500">No hay registros para la semana ${semanaFiltro}.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-500">No hay registros para la semana ${semanaFiltro}.</td></tr>`;
                     return;
                 }
 
@@ -838,6 +859,7 @@ const app = initializeApp(firebaseConfig);
                             <td class="p-2.5 border text-[11px]">${accionesStr}</td>
                             <td class="p-2.5 border text-center">${d.itinerante}</td>
                             <td class="p-2.5 border text-[11px]">${d.notas || '-'}</td>
+                            <td class="p-2.5 border text-[11px] text-emerald-900 font-medium">${d.nota_coordinacion || '-'}</td>
                             <td class="p-2.5 border text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${d.estatusValidacion === 'Validado' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${d.estatusValidacion || 'Pendiente'}</span></td>
                         </tr>
                     `;
@@ -845,7 +867,7 @@ const app = initializeApp(firebaseConfig);
                 tbody.innerHTML = html;
             } catch (err) {
                 console.error("Error al generar impresión:", err);
-                tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-red-500">Error al consultar la base de datos.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-red-500">Error al consultar la base de datos.</td></tr>`;
             }
         }
 
@@ -873,6 +895,7 @@ const app = initializeApp(firebaseConfig);
                         "Acciones Prioritarias": Array.isArray(d.accionesPrioritarias) ? d.accionesPrioritarias.join(', ') : '',
                         "Grupo Itinerante": d.itinerante || 'No',
                         "Notas": d.notas || '',
+                        "Nota de Coordinación": d.nota_coordinacion || '',
                         "Estatus Validación": d.estatusValidacion || 'Pendiente'
                     });
                 });
@@ -887,7 +910,7 @@ const app = initializeApp(firebaseConfig);
             }
         }
 
-        // Cargar datos para Validación
+        // Cargar datos para Validación (Hoja 5)
         async function loadValidationData() {
             const semanaFiltro = document.getElementById('valFilterSemana').value;
             const distritoFiltro = document.getElementById('valFilterDistrito').value;
@@ -911,18 +934,26 @@ const app = initializeApp(firebaseConfig);
                 snapshot.forEach(doc => {
                     const d = doc.data();
                     const isValido = d.estatusValidacion === 'Validado';
+                    const notaCoord = d.nota_coordinacion || '';
                     html += `
                         <tr class="hover:bg-slate-50 border-b">
                             <td class="p-3 font-semibold">Sem. ${d.semana}</td>
                             <td class="p-3">${d.distrito}</td>
                             <td class="p-3">${d.dia} (${d.fechaActividad})</td>
-                            <td class="p-3">${d.sede}</td>
-                            <td class="p-3">${d.actividad}</td>
+                            <td class="p-3"><strong>${d.sede}</strong><br><span class="text-slate-600">${d.actividad}</span></td>
+                            <td class="p-3">
+                                <div class="text-slate-700 italic max-w-xs truncate" title="${notaCoord}">${notaCoord || '<span class="text-slate-400 not-italic">Sin nota</span>'}</div>
+                            </td>
                             <td class="p-3"><span class="px-2.5 py-1 rounded text-xs font-semibold ${isValido ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${d.estatusValidacion || 'Pendiente'}</span></td>
-                            <td class="p-3 text-center">
-                                <button onclick="toggleValidation('${doc.id}', '${isValido ? 'Pendiente' : 'Validado'}')" class="${isValido ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'} text-white px-3 py-1 rounded text-xs font-semibold transition">
-                                    ${isValido ? 'Marcar Pendiente' : 'Validar'}
-                                </button>
+                            <td class="p-3 text-center space-y-1">
+                                <div class="flex justify-center space-x-1">
+                                    <button onclick="openNoteModal('${doc.id}', \`${encodeURIComponent(notaCoord)}\`)" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-xs font-medium transition" title="Añadir o editar nota de coordinación">
+                                        <i class="fa-solid fa-comment-medical"></i> Nota
+                                    </button>
+                                    <button onclick="toggleValidation('${doc.id}', '${isValido ? 'Pendiente' : 'Validado'}')" class="${isValido ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'} text-white px-2.5 py-1 rounded text-xs font-semibold transition">
+                                        ${isValido ? 'Marcar Pendiente' : 'Validar'}
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `;
@@ -943,6 +974,39 @@ const app = initializeApp(firebaseConfig);
             } catch (err) {
                 console.error("Error al actualizar validación:", err);
                 alert("No se pudo actualizar el estatus de validación.");
+            }
+        }
+
+        // Gestión del Modal de Nota de Coordinación
+        function openNoteModal(id, currentNoteEncoded) {
+            document.getElementById('noteRecordId').value = id;
+            document.getElementById('noteCoordinationText').value = decodeURIComponent(currentNoteEncoded);
+            document.getElementById('noteModal').classList.remove('hidden');
+        }
+
+        function closeNoteModal() {
+            document.getElementById('noteModal').classList.add('hidden');
+            document.getElementById('noteRecordId').value = '';
+            document.getElementById('noteCoordinationText').value = '';
+        }
+
+        async function saveCoordinationNote(e) {
+            e.preventDefault();
+            const id = document.getElementById('noteRecordId').value;
+            const noteText = document.getElementById('noteCoordinationText').value.trim();
+
+            if (!id) return;
+
+            try {
+                await db.collection('RegistroDatos').doc(id).update({
+                    nota_coordinacion: noteText
+                });
+                alert("¡Nota de coordinación guardada exitosamente!");
+                closeNoteModal();
+                loadValidationData();
+            } catch (err) {
+                console.error("Error al guardar nota de coordinación:", err);
+                alert("Error al actualizar la nota en la base de datos.");
             }
         }
     </script>
